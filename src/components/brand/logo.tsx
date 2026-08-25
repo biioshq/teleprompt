@@ -64,19 +64,59 @@ export function Wordmark({ className }: { className?: string }) {
   );
 }
 
+/**
+ * The attribution line that sits under the logotype in the headers: `biios`
+ * keeps its orange so the studio name reads as the studio name and not as a
+ * second half of the product name.
+ */
+export function Byline({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn(
+        "font-display text-[0.625rem] leading-none font-medium tracking-[0.01em] text-faint lowercase",
+        className,
+      )}
+    >
+      by <span className="font-bold tracking-[-0.03em] text-brand">biios</span>
+    </span>
+  );
+}
+
 export function Logo({
   className,
   markClassName,
   wordmarkClassName,
+  bylineClassName,
+  byline = false,
 }: {
   className?: string;
   markClassName?: string;
   wordmarkClassName?: string;
+  bylineClassName?: string;
+  byline?: boolean;
 }) {
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)}>
       <Mark className={cn("h-7 w-7", markClassName)} />
-      <Wordmark className={wordmarkClassName} />
+      <span
+        className={cn(
+          "inline-flex flex-col items-start",
+          /* Both lines are `leading-none`, so their boxes end well short of
+             the ink: the stack's letters sit low inside it and read as
+             misaligned against the mark. The padding lifts the ink back onto
+             the mark's centre line. */
+          byline && "pb-[3px]",
+        )}
+      >
+        <Wordmark className={wordmarkClassName} />
+        {/* Pulled up past the wordmark's baseline so the two lines overlap
+            slightly and read as one lockup. Nothing collides: the wordmark's
+            only descender is the `p` at the far right, and `by biios` is set
+            at the left. */}
+        {byline ? (
+          <Byline className={cn("-mt-[3px]", bylineClassName)} />
+        ) : null}
+      </span>
     </span>
   );
 }

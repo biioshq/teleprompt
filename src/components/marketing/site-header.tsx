@@ -11,9 +11,16 @@ export async function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-paper/80 pad-safe-top pad-safe-x backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-6xl items-center gap-8 px-5">
-        <Link href="/" aria-label={SITE.name}>
-          <Logo wordmarkClassName="text-[1.125rem]" markClassName="h-8 w-8" />
+      {/* Three tracks with matching `1fr` edges, so the nav is centred on the
+          header itself rather than on whatever the logo and the buttons leave
+          over. */}
+      <div className="mx-auto grid h-16 max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-8 px-5">
+        <Link href="/" aria-label={SITE.name} className="justify-self-start">
+          <Logo
+            byline
+            wordmarkClassName="text-[1.125rem]"
+            markClassName="h-9 w-9"
+          />
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">
@@ -43,7 +50,7 @@ export async function SiteHeader() {
           </Link>
         </nav>
 
-        <div className="ml-auto flex items-center gap-4">
+        <div className="flex items-center gap-4 justify-self-end">
           <a
             href={SITE.repo}
             target="_blank"

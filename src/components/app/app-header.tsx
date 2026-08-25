@@ -14,7 +14,7 @@ export async function AppHeader() {
     <header className="sticky top-0 z-40 border-b border-line bg-paper/85 pad-safe-top pad-safe-x backdrop-blur-sm">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-5">
         <Link href="/app" aria-label="Teleprompt">
-          <Logo />
+          <Logo byline markClassName="h-8 w-8" />
         </Link>
 
         <nav className="ml-2 hidden items-center gap-5 sm:flex">
