@@ -5,7 +5,7 @@ import { ButtonLink } from "~/components/ui/button";
 
 export default function NotFound() {
   return (
-    <main className="grain flex min-h-[100dvh] items-center justify-center px-6 pr-[calc(1.5rem+env(safe-area-inset-right))] pl-[calc(1.5rem+env(safe-area-inset-left))]">
+    <main className="grain flex min-h-[100dvh] items-center justify-center py-16 gutter pb-[calc(4rem+env(safe-area-inset-bottom))]">
       <span aria-hidden className="grain-layer" />
       <div className="w-full max-w-md text-center">
         <Link href="/" className="inline-flex">

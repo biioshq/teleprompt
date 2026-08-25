@@ -13,7 +13,7 @@ const UPDATED = "25 August 2026";
 
 export default function TermsPage() {
   return (
-    <main className="mx-auto max-w-2xl px-5 py-16 lg:py-24">
+    <main className="mx-auto max-w-2xl py-16 gutter lg:py-24">
       <p className="eyebrow">Legal</p>
       <h1 className="mt-4 text-[clamp(2rem,4.5vw,3rem)]">Terms of use</h1>
       <p className="mt-4 font-mono text-[0.75rem] tracking-[0.1em] text-muted">

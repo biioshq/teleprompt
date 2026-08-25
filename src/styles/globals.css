@@ -201,6 +201,24 @@
   padding-right: env(safe-area-inset-right);
 }
 
+/* The page gutter.
+   Replaces a flat `px-5` on content containers. `max()` rather than `calc()`
+   because this is a gutter, not a bar: it wants at least the normal 20px, and
+   at least enough to clear the notch, but not both added together. In portrait
+   and on a desktop it resolves to exactly the `px-5` it replaced.
+
+   The inset belongs here rather than on a page wrapper because backgrounds
+   have to stay full-bleed: insetting the wrapper would leave unpainted strips
+   down the notch side of every tinted section. */
+@utility gutter {
+  padding-left: max(1.25rem, env(safe-area-inset-left));
+  padding-right: max(1.25rem, env(safe-area-inset-right));
+}
+@utility gutter-sm {
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+}
+
 /* Editorial eyebrow above a heading. */
 @utility eyebrow {
   font-family: var(--font-mono);

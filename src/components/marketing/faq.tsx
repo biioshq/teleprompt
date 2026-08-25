@@ -46,7 +46,7 @@ const QUESTIONS = [
 export function Faq() {
   return (
     <section className="border-t border-line py-20 lg:py-28">
-      <div className="mx-auto max-w-3xl px-5">
+      <div className="mx-auto max-w-3xl gutter">
         <h2 className="text-[clamp(1.9rem,4vw,2.75rem)]">
           The ones people actually ask.
         </h2>

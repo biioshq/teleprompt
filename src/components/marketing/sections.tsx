@@ -43,7 +43,7 @@ export function Hero({ signedIn }: { signedIn: boolean }) {
         }}
       />
 
-      <div className="relative mx-auto grid max-w-6xl items-center gap-16 px-5 pt-16 pb-40 lg:grid-cols-[1.05fr_0.95fr] lg:pt-24 lg:pb-28">
+      <div className="relative mx-auto grid max-w-6xl items-center gap-16 pt-16 gutter pb-40 lg:grid-cols-[1.05fr_0.95fr] lg:pt-24 lg:pb-28">
         <div className="animate-rise">
           <Cue>free forever, open source, installs like an app</Cue>
 
@@ -103,7 +103,7 @@ const STEPS = [
 export function HowItWorks() {
   return (
     <section id="how" className="border-t border-line py-20 lg:py-28">
-      <div className="mx-auto max-w-6xl px-5">
+      <div className="mx-auto max-w-6xl gutter">
         <div className="max-w-2xl">
           <h2 className="text-[clamp(1.9rem,4vw,2.75rem)]">
             Three steps, and the second one is typing six characters.
@@ -157,7 +157,7 @@ const SYNC_POINTS = [
 export function SyncExplainer() {
   return (
     <section id="sync" className="bg-ink py-20 text-paper lg:py-28">
-      <div className="mx-auto max-w-6xl px-5">
+      <div className="mx-auto max-w-6xl gutter">
         <div className="grid gap-14 lg:grid-cols-[0.9fr_1.1fr]">
           <div>
             <h2 className="text-[clamp(1.9rem,4vw,2.75rem)] text-white">
@@ -242,7 +242,7 @@ export function VoiceSection() {
       id="voice"
       className="border-y border-line bg-paper-deep py-20 lg:py-28"
     >
-      <div className="mx-auto grid max-w-6xl gap-14 px-5 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+      <div className="mx-auto grid max-w-6xl gap-14 gutter lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
         <div>
           <h2 className="text-[clamp(1.9rem,4vw,2.75rem)]">
             Or stop setting a pace, and just talk.
@@ -407,7 +407,7 @@ const FEATURES = [
 export function Features() {
   return (
     <section className="py-20 lg:py-28">
-      <div className="mx-auto max-w-6xl px-5">
+      <div className="mx-auto max-w-6xl gutter">
         <div className="max-w-2xl">
           <h2 className="text-[clamp(1.9rem,4vw,2.75rem)]">
             The things you only notice when they are missing.
@@ -461,7 +461,7 @@ That is the whole idea. Thank you.`;
 export function WritingSection() {
   return (
     <section className="border-y border-line bg-paper-deep py-20 lg:py-28">
-      <div className="mx-auto grid max-w-6xl gap-14 px-5 lg:grid-cols-2 lg:items-center">
+      <div className="mx-auto grid max-w-6xl gap-14 gutter lg:grid-cols-2 lg:items-center">
         <div>
           <h2 className="text-[clamp(1.9rem,4vw,2.75rem)]">
             Markdown, plus one idea of our own.
@@ -557,7 +557,7 @@ export function WritingSection() {
 export function InstallSection() {
   return (
     <section className="py-20 lg:py-24">
-      <div className="mx-auto max-w-6xl px-5">
+      <div className="mx-auto max-w-6xl gutter">
         <div className="grid gap-10 rounded-md border border-ink bg-surface p-8 shadow-hard-lg lg:grid-cols-[1.2fr_0.8fr] lg:p-12">
           <div>
             <h2 className="text-[clamp(1.6rem,3.2vw,2.25rem)]">
@@ -620,7 +620,7 @@ const STACK = [
 export function OpenSourceSection() {
   return (
     <section className="border-t border-line py-20 lg:py-28">
-      <div className="mx-auto max-w-6xl px-5">
+      <div className="mx-auto max-w-6xl gutter">
         <div className="grid gap-12 lg:grid-cols-[1fr_1fr]">
           <div>
             <h2 className="text-[clamp(1.9rem,4vw,2.75rem)]">
@@ -688,7 +688,7 @@ export function OpenSourceSection() {
 export function BiiosSection() {
   return (
     <section className="bg-ink py-20 text-paper lg:py-28">
-      <div className="mx-auto max-w-6xl px-5">
+      <div className="mx-auto max-w-6xl gutter">
         <div className="grid gap-14 lg:grid-cols-[1fr_1.05fr]">
           <div>
             <Cue tone="ink">the studio behind it</Cue>
@@ -779,7 +779,7 @@ export function BiiosSection() {
 export function FinalCta({ signedIn }: { signedIn: boolean }) {
   return (
     <section className="py-24 lg:py-32">
-      <div className="mx-auto max-w-3xl px-5 text-center">
+      <div className="mx-auto max-w-3xl gutter text-center">
         <h2 className="text-[clamp(2rem,5vw,3.25rem)] leading-[1.02]">
           Put the words where you are looking.
         </h2>

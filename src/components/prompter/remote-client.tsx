@@ -386,7 +386,7 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
       </header>
 
       {waiting ? (
-        <div className="flex shrink-0 items-center gap-3 border-b border-stage-line bg-stage-raised px-4 py-3">
+        <div className="flex shrink-0 items-center gap-3 border-b border-stage-line bg-stage-raised py-3 gutter-sm">
           <span className="animate-live inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
           <p className="text-[0.8125rem] leading-snug text-stage-muted">
             No display connected yet. Open{" "}
@@ -416,7 +416,7 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
           words
         />
 
-        <div className="absolute top-3 right-3 z-10 flex flex-col gap-1.5">
+        <div className="absolute top-3 right-[max(0.75rem,env(safe-area-inset-right))] z-10 flex flex-col gap-1.5">
           <button
             type="button"
             onClick={() =>
@@ -453,7 +453,7 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
       </div>
 
       {/* Controls --------------------------------------------------------- */}
-      <footer className="shrink-0 border-t border-stage-line px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+      <footer className="shrink-0 border-t border-stage-line pt-4 gutter-sm pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <ProgressReadout
           engine={engine}
           totalWords={totalWords}

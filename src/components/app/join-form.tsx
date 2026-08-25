@@ -23,7 +23,7 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
   const room = lookup.data;
 
   return (
-    <main className="mx-auto max-w-md px-5 py-16">
+    <main className="mx-auto max-w-md py-16 gutter">
       <h1 className="text-3xl">Join a room</h1>
       <p className="mt-3 text-[0.9375rem] leading-relaxed text-muted">
         Type the code shown on the other device. Both devices must be signed in
