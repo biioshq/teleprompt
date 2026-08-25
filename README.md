@@ -194,6 +194,35 @@ The docs ship with the app, at `/docs`:
 - Architecture, privacy and data
 - Self-hosting, troubleshooting, contributing
 
+## Deployment health
+
+Auth.js reports every internal failure as one generic "misconfigured" message,
+so a deployment that cannot reach Postgres, is missing `AUTH_SECRET`, or was
+never migrated all look identical in the browser. `/api/health` tells them
+apart:
+
+```bash
+curl -s https://your-domain.example/api/health
+```
+
+```json
+{
+  "ready": true,
+  "database": { "ok": true, "latencyMs": 42, "tables": 7, "canWrite": true },
+  "auth": {
+    "secret": true,
+    "trustHost": true,
+    "providers": ["google", "github"]
+  },
+  "realtime": { "url": true, "anonKey": true },
+  "siteUrl": true
+}
+```
+
+It returns 503 when anything required is missing. Every field is a boolean, a
+count, a duration or an error code - no connection string, no secret, no
+hostname.
+
 ## Self-hosting
 
 It is a standard Next.js App Router application with no edge-only or

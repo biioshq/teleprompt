@@ -178,6 +178,29 @@ export default function Page() {
       </p>
       <h2 id="prod-only">Works locally, fails deployed</h2>
       <p>
+        Start here, because Auth.js reports every internal failure as the same
+        generic <em>&ldquo;misconfigured&rdquo;</em> sentence and the browser
+        gives you nothing to go on:
+      </p>
+      <pre>
+        <code>{`curl -s https://your-domain.example/api/health`}</code>
+      </pre>
+      <p>
+        It answers the questions that error cannot. <code>database.ok</code>{" "}
+        false with an error code means the deployment cannot reach Postgres at
+        all; <code>ENETUNREACH</code> or <code>ENOTFOUND</code> points straight
+        at the IPv6 problem below. <code>database.tables</code> below seven
+        means it connected but was never migrated.{" "}
+        <code>database.canWrite</code> false means the role can read but not
+        create users. <code>auth.secret</code> false means{" "}
+        <code>AUTH_SECRET</code> is missing, which produces the identical
+        message. <code>auth.providers</code> empty means no credentials.
+      </p>
+      <p>
+        Everything it returns is a boolean, a count, a duration or an error
+        code. No connection string, no secret, no hostname.
+      </p>
+      <p>
         The specific shape of this one:{" "}
         <em>&ldquo;This deployment&rsquo;s sign-in is misconfigured&rdquo;</em>{" "}
         in production, with the identical environment variables that work on
