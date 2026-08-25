@@ -227,6 +227,13 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY="…"
         colliding. <code>npm run db:studio</code> opens Drizzle Studio if you
         want to look at them.
       </p>
+      <p>
+        The push runs over whichever URL is in <code>DATABASE_URL</code>,
+        including the transaction pooler. Session mode is not required for the
+        migration, and not every project exposes it on the <code>aws-0</code>{" "}
+        hostname, so reach for it only if the transaction pooler gives you
+        trouble.
+      </p>
 
       <h2 id="run">6. Run it</h2>
       <pre>
