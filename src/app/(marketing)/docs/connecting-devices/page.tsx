@@ -133,6 +133,12 @@ export default function Page() {
         up within a sentence of where it stopped.
       </p>
       <p>
+        Editing the script behind a live room is safe. The new text is written
+        into the room as part of the save, and every device picks it up within a
+        few seconds, keeping the reading position. You do not have to close the
+        room and open another one.
+      </p>
+      <p>
         See <Link href="/docs/architecture">Architecture</Link> for the message
         formats and the exact state model.
       </p>

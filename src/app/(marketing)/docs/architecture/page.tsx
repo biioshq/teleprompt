@@ -79,9 +79,18 @@ blockFraction = (position - block.offsetTop) / block.height;`}</code>
       </p>
 
       <Note title="Why the script is snapshotted">
-        Identical block lists depend on identical source text. That is why a
-        room holds a copy of the script rather than a live reference, and why
-        pulling in edits is an explicit action that resets the position.
+        Identical block lists depend on identical source text, which is why a
+        room holds a copy rather than a live reference: two devices reading
+        different revisions would sync positions against different texts and
+        quietly disagree about which line they were on.
+        <br />
+        <br />
+        Saving an edit therefore writes the new text into every live room using
+        that script, in the same transaction as the script itself, and bumps the
+        room&rsquo;s <code>contentRevision</code>. Devices notice the new
+        revision on their next poll and refetch. The reading position is carried
+        across by clamping the block index rather than reset, so fixing a typo
+        further down does not throw the reader back to the top.
       </Note>
 
       <h2 id="state">The room state</h2>

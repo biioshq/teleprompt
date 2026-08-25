@@ -84,10 +84,11 @@ export default function Page() {
       </p>
 
       <Note title="Why a snapshot">
-        A room holds a copy of the script rather than a live reference. Both
-        devices have to render byte-identical text for their block indices to
-        line up, so edits are pulled in explicitly — the room page offers to do
-        it whenever the source script has moved on.
+        A room holds a copy of the script rather than a live reference, because
+        both devices have to render byte-identical text for their block indices
+        to line up. Keeping that copy current is the app&rsquo;s job: edit the
+        script and every device in the room picks the change up within a few
+        seconds, carrying your reading position across rather than resetting it.
       </Note>
 
       <h2 id="pair">3. Pair the second device</h2>

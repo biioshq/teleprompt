@@ -1,13 +1,19 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { inferTitle, scriptWordCount } from "~/lib/markdown/blocks";
+import {
+  inferTitle,
+  scriptWordCount,
+  splitIntoBlocks,
+} from "~/lib/markdown/blocks";
+import { parseState } from "~/lib/prompter/state";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { db as database } from "~/server/db";
-import { scripts } from "~/server/db/schema";
+import { rooms, scripts } from "~/server/db/schema";
 
 type Db = typeof database;
+type Script = typeof scripts.$inferSelect;
 
 const idInput = z.object({ id: z.string().uuid() });
 
@@ -44,6 +50,62 @@ async function requireScript(db: Db, id: string, ownerId: string) {
     });
   }
   return script;
+}
+
+/**
+ * Push an edited script into any room that is currently showing it.
+ *
+ * A room holds a snapshot rather than a live reference, because both devices
+ * have to render byte-identical text for block indices to mean the same thing
+ * on each. That requirement has not changed. What has changed is who is
+ * responsible for keeping the snapshot current: it used to be the person,
+ * through a button on the room page, and forgetting to press it left two
+ * devices syncing positions against two different texts.
+ *
+ * The reading position is carried over rather than reset. Clamping the block
+ * index is not perfect - inserting a paragraph above where someone is reading
+ * shifts them by one - but it is far better than throwing them back to the top
+ * of the script because a typo was fixed further down.
+ */
+async function syncLiveRooms(db: Db, script: Script, ownerId: string) {
+  const live = await db.query.rooms.findMany({
+    where: and(
+      eq(rooms.scriptId, script.id),
+      eq(rooms.ownerId, ownerId),
+      eq(rooms.status, "live"),
+    ),
+  });
+  if (live.length === 0) return;
+
+  const blockCount = splitIntoBlocks(script.body).length;
+  const lastBlock = Math.max(0, blockCount - 1);
+
+  for (const room of live) {
+    if (room.content === script.body && room.title === script.title) continue;
+
+    const current = parseState(room.state);
+    const blockIndex = Math.min(current.anchor.blockIndex, lastBlock);
+    const keptExactly = blockIndex === current.anchor.blockIndex;
+
+    await db
+      .update(rooms)
+      .set({
+        title: script.title,
+        content: script.body,
+        contentRevision: sql`${rooms.contentRevision} + 1`,
+        state: {
+          ...current,
+          anchor: {
+            blockIndex,
+            blockFraction: keptExactly ? current.anchor.blockFraction : 0,
+          },
+          revision: current.revision + 1,
+          updatedAt: Date.now(),
+        },
+        lastActiveAt: new Date(),
+      })
+      .where(eq(rooms.id, room.id));
+  }
 }
 
 export const scriptRouter = createTRPCRouter({
@@ -127,6 +189,10 @@ export const scriptRouter = createTRPCRouter({
           ),
         )
         .returning();
+
+      if (input.body !== undefined) {
+        await syncLiveRooms(ctx.db, updated!, ctx.session.user.id);
+      }
 
       return updated!;
     }),

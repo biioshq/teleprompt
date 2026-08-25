@@ -96,22 +96,26 @@ export function useSyncLink({
     return true;
   }, []);
 
-  const rawSend = useCallback((message: Message) => {
-    const payload = JSON.stringify(message);
-    const mesh = meshRef.current;
-    const direct = mesh?.send(payload);
+  const rawSend = useCallback(
+    (message: Message, options?: { alwaysRelay?: boolean }) => {
+      const payload = JSON.stringify(message);
+      const mesh = meshRef.current;
+      const direct = mesh?.send(payload);
 
-    // Cover anyone the mesh could not reach, and anyone not yet in the mesh at
-    // all. Duplicates are harmless — the receiver dedupes on (from, seq).
-    const needsRelay = !direct || direct.missing.length > 0;
-    if (needsRelay && channelRef.current) {
-      void channelRef.current.send({
-        type: "broadcast",
-        event: "m",
-        payload: message,
-      });
-    }
-  }, []);
+      // Cover anyone the mesh could not reach, and anyone not yet in the mesh at
+      // all. Duplicates are harmless — the receiver dedupes on (from, seq).
+      const needsRelay =
+        options?.alwaysRelay === true || !direct || direct.missing.length > 0;
+      if (needsRelay && channelRef.current) {
+        void channelRef.current.send({
+          type: "broadcast",
+          event: "m",
+          payload: message,
+        });
+      }
+    },
+    [],
+  );
 
   const send = useCallback(
     (message: OutgoingMessage) => {
@@ -324,12 +328,19 @@ export function useSyncLink({
 
     const ping = window.setInterval(() => {
       if (cancelled) return;
-      rawSend({
-        t: "ping",
-        from: deviceKey,
-        seq: seqRef.current++,
-        at: Date.now(),
-      });
+      // Deliberately forced onto the relay as well as any direct channel.
+      // The watchdog below treats silence as a dead relay, so if pings only
+      // travelled peer-to-peer a perfectly healthy relay would look dead the
+      // moment a data channel opened, and the link would rejoin on a loop.
+      rawSend(
+        {
+          t: "ping",
+          from: deviceKey,
+          seq: seqRef.current++,
+          at: Date.now(),
+        },
+        { alwaysRelay: true },
+      );
     }, PING_INTERVAL_MS);
 
     /**
@@ -361,6 +372,10 @@ export function useSyncLink({
     };
     const onVisible = () => {
       if (cancelled || document.visibilityState !== "visible") return;
+      // Alone in a room, silence proves nothing: there is nobody to hear from,
+      // so `lastInbound` is always ancient and this would rejoin on every
+      // single tab switch.
+      if (peersRef.current.length === 0) return;
       // Coming back from the background is the moment a stale socket shows up.
       if (Date.now() - lastInboundRef.current > STALE_AFTER_MS) {
         attempt = 0;

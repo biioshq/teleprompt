@@ -23,7 +23,7 @@ const QUESTIONS = [
   },
   {
     q: "What happens if I edit the script while a room is open?",
-    a: "Nothing, until you ask for it. A room holds a snapshot of the script so that both devices render byte-identical text, which is what keeps block indices lined up. When the source script changes, the room page offers to pull the edits in, which resets the position to the top.",
+    a: "The room picks it up on its own, within a few seconds. A room holds a snapshot rather than a live reference, because both devices have to render byte-identical text for positions to mean the same thing on each - but keeping that snapshot current is the app's job, not yours. Your reading position is carried across the change rather than reset.",
   },
   {
     q: "Is there a paid tier?",

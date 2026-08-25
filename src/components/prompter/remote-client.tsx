@@ -49,9 +49,12 @@ export function RemoteClient({ roomId }: { roomId: string }) {
     "remote",
   );
 
-  if (isLoading) return <StageLoading label="Connecting the remote" />;
+  if (isLoading && !room) return <StageLoading label="Connecting the remote" />;
 
-  if (error || !room) {
+  // Only a room we never loaded is a dead end. A background refetch that
+  // fails mid-session must not unmount the stage: that tears down the engine
+  // and the realtime link, and the take comes back as "connecting".
+  if (!room) {
     return (
       <StageMessage
         title="Room not available"

@@ -305,35 +305,43 @@ export function useRoomSession({
     };
   }, [driving, engine, link.degraded, room.id]);
 
-  /* --- Fallback: the database as a slow transport ------------------------ */
+  /* --- Room state: a slow poll that does two jobs ------------------------ */
 
   /**
-   * Some networks will not carry a WebSocket at all, and a phone that has been
-   * in a pocket comes back with a socket that is open but dead. Rather than
-   * leave the remote frozen on a stale line, a device that cannot trust the
-   * realtime path reads the room's persisted state instead.
+   * This runs whether or not the realtime link is healthy, because it answers
+   * a question the wire protocol cannot: has the underlying script changed?
+   * The person editing it is in the editor, not in the room, so there is
+   * nobody on the channel to announce it.
    *
-   * It is coarse - a couple of seconds behind - but the follower still knows
-   * the pace and whether playback is running, so dead reckoning carries it
-   * between polls and the text keeps moving at the right speed. The moment the
-   * channel recovers, this switches itself off.
+   * When the link is also unreliable it doubles as the transport, at a faster
+   * cadence. The snapshot carries pace and play state as well as the anchor,
+   * so a follower dead-reckons between polls and the text keeps moving at the
+   * right speed rather than freezing and lurching.
    */
-  const fallbackEnabled = !driving && link.degraded;
-  const fallbackState = api.room.getState.useQuery(
+  const roomState = api.room.getState.useQuery(
     { roomId: room.id },
     {
-      enabled: fallbackEnabled,
-      refetchInterval: fallbackEnabled ? 2000 : false,
+      refetchInterval: link.degraded ? 2000 : 5000,
       refetchIntervalInBackground: false,
       staleTime: 0,
       retry: false,
     },
   );
 
+  const usingPolledState = !driving && link.degraded;
+
   useEffect(() => {
-    if (!fallbackEnabled) return;
-    const data = fallbackState.data;
+    const data = roomState.data;
     if (!data) return;
+
+    // A newer snapshot of the script exists. Both devices must be rendering
+    // identical text before block indices mean anything, so pull it in.
+    if (data.contentRevision > room.contentRevision) {
+      onReloadRef.current?.();
+      return;
+    }
+
+    if (!usingPolledState) return;
 
     engine.receive({
       anchor: data.state.anchor,
@@ -344,10 +352,7 @@ export function useRoomSession({
       stateRef.current = data.state;
       setState(data.state);
     }
-    if (data.contentRevision > room.contentRevision) {
-      onReloadRef.current?.();
-    }
-  }, [fallbackEnabled, fallbackState.data, engine, room.contentRevision]);
+  }, [roomState.data, usingPolledState, engine, room.contentRevision]);
 
   /* --- Presence bookkeeping ---------------------------------------------- */
 
@@ -395,7 +400,7 @@ export function useRoomSession({
     latencyMs: link.latencyMs,
     degraded: link.degraded,
     /** True when position is coming from the database rather than a peer. */
-    polling: fallbackEnabled,
+    polling: usingPolledState,
     announceReload: (contentRevision: number) =>
       sendRef.current({ t: "reload", contentRevision }),
   };

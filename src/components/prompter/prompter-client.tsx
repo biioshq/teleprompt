@@ -41,9 +41,12 @@ export function PrompterClient({ roomId }: { roomId: string }) {
     "prompter",
   );
 
-  if (isLoading) return <StageLoading label="Opening the room" />;
+  if (isLoading && !room) return <StageLoading label="Opening the room" />;
 
-  if (error || !room) {
+  // Only a room we never loaded is a dead end. A background refetch that
+  // fails mid-session must not unmount the stage: that tears down the engine
+  // and the realtime link, and the take comes back as "connecting".
+  if (!room) {
     return (
       <StageMessage
         title="Room not available"

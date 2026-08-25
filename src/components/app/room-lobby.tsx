@@ -236,7 +236,8 @@ export function RoomLobby({ roomId }: { roomId: string }) {
               className="shrink-0 text-brand-deep"
             />
             <p className="text-[0.8125rem] leading-snug text-brand-deep">
-              The script has changed since this room opened.
+              This room is behind the script. It normally catches up on its own,
+              so this is a manual nudge.
             </p>
             <Button
               variant="outline"

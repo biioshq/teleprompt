@@ -8,7 +8,7 @@ import {
   parseState,
   prompterStateSchema,
 } from "~/lib/prompter/state";
-import { scriptWordCount } from "~/lib/markdown/blocks";
+import { scriptWordCount, splitIntoBlocks } from "~/lib/markdown/blocks";
 import {
   generateChannelKey,
   generateJoinCode,
@@ -382,14 +382,29 @@ export const roomRouter = createTRPCRouter({
           title: script.title,
           content: script.body,
           contentRevision: sql`${rooms.contentRevision} + 1`,
-          // The old anchor points into text that no longer exists.
-          state: {
-            ...parseState(room.state),
-            anchor: { blockIndex: 0, blockFraction: 0 },
-            isPlaying: false,
-            revision: parseState(room.state).revision + 1,
-            updatedAt: Date.now(),
-          },
+          // Keep the reader where they were. Clamping the block index is not
+          // exact - text inserted above shifts them - but resetting to the top
+          // of the script because something changed further down is worse.
+          state: (() => {
+            const current = parseState(room.state);
+            const lastBlock = Math.max(
+              0,
+              splitIntoBlocks(script.body).length - 1,
+            );
+            const blockIndex = Math.min(current.anchor.blockIndex, lastBlock);
+            return {
+              ...current,
+              anchor: {
+                blockIndex,
+                blockFraction:
+                  blockIndex === current.anchor.blockIndex
+                    ? current.anchor.blockFraction
+                    : 0,
+              },
+              revision: current.revision + 1,
+              updatedAt: Date.now(),
+            };
+          })(),
           lastActiveAt: new Date(),
         })
         .where(eq(rooms.id, room.id))
