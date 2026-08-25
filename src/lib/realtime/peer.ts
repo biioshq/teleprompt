@@ -16,15 +16,41 @@ import { shouldInitiateTo } from "~/lib/realtime/protocol";
  * If it fails — symmetric NAT, a locked-down network, no STUN reachability —
  * nothing breaks. `link.ts` keeps using the relay, and the only observable
  * difference is the connection badge reading "relay" instead of "direct".
+ *
+ * Everything about retrying lives here, and it has to, because signalling is
+ * carried by a channel that legitimately comes and goes. An offer or an ICE
+ * candidate sent while the relay is between subscriptions is simply gone;
+ * there is no acknowledgement and no redelivery. A negotiation that stalls for
+ * that reason looks exactly like one that stalled for any other, so rather
+ * than trying to detect the cause, a peer that has not opened within a
+ * deadline is torn down and built again.
  */
 
-export type PeerState = "connecting" | "open" | "failed" | "closed";
+export type PeerState =
+  "connecting" | "open" | "failed" | "closed" | "retrying";
 
 const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun.l.google.com:19302" },
   { urls: "stun:stun1.l.google.com:19302" },
   { urls: "stun:global.stun.twilio.com:3478" },
 ];
+
+/**
+ * On the same Wi-Fi a data channel opens almost immediately, because host
+ * candidates need no server at all. Eight seconds is far past that and still
+ * short enough that a lost offer is recovered from before anyone gives up on
+ * it and reloads the page.
+ */
+const NEGOTIATION_TIMEOUT_MS = 8000;
+/** How often the mesh re-examines itself, independent of presence events. */
+const RETRY_TICK_MS = 3000;
+/**
+ * After this many attempts the pair is treated as genuinely unable to reach
+ * each other. The relay carries the session perfectly well, so the right
+ * behaviour is to stop burning connections rather than to keep trying forever.
+ */
+const MAX_ATTEMPTS = 5;
+const BACKOFF_MS = [0, 1000, 3000, 7000, 15_000];
 
 type PeerEntry = {
   pc: RTCPeerConnection;
@@ -34,7 +60,11 @@ type PeerEntry = {
   /** ICE that arrived before the remote description was set. */
   queuedCandidates: RTCIceCandidateInit[];
   hasRemoteDescription: boolean;
+  startedAt: number;
 };
+
+/** Kept per peer key, so it survives the connection being torn down. */
+type Attempt = { count: number; nextAt: number };
 
 export type PeerMeshOptions = {
   selfKey: string;
@@ -46,11 +76,19 @@ export type PeerMeshOptions = {
 
 export class PeerMesh {
   private readonly peers = new Map<string, PeerEntry>();
+  private readonly attempts = new Map<string, Attempt>();
+  private wanted = new Set<string>();
   private readonly options: PeerMeshOptions;
+  private ticker: number | null = null;
   private disposed = false;
 
   constructor(options: PeerMeshOptions) {
     this.options = options;
+    if (PeerMesh.supported && typeof window !== "undefined") {
+      // Presence events are not a reliable heartbeat: a peer list that never
+      // changes again would leave a stalled negotiation stalled forever.
+      this.ticker = window.setInterval(() => this.reconcile(), RETRY_TICK_MS);
+    }
   }
 
   static get supported() {
@@ -63,19 +101,51 @@ export class PeerMesh {
   /** Reconcile the mesh against the current presence list. */
   syncPeers(peerKeys: string[]) {
     if (this.disposed || !PeerMesh.supported) return;
-
-    const wanted = new Set(
+    this.wanted = new Set(
       peerKeys.filter((key) => key !== this.options.selfKey),
     );
+    this.reconcile();
+  }
+
+  private reconcile() {
+    if (this.disposed || !PeerMesh.supported) return;
+    const now = Date.now();
 
     for (const key of [...this.peers.keys()]) {
-      if (!wanted.has(key)) this.closePeer(key);
+      if (!this.wanted.has(key)) {
+        this.closePeer(key);
+        this.attempts.delete(key);
+      }
+    }
+    for (const key of [...this.attempts.keys()]) {
+      if (!this.wanted.has(key)) this.attempts.delete(key);
     }
 
-    for (const key of wanted) {
-      const existing = this.peers.get(key);
-      if (existing && existing.state !== "failed") continue;
-      if (existing) this.closePeer(key);
+    for (const key of this.wanted) {
+      const entry = this.peers.get(key);
+
+      if (entry?.state === "open") continue;
+
+      if (entry) {
+        const stalled =
+          entry.state === "connecting" &&
+          now - entry.startedAt > NEGOTIATION_TIMEOUT_MS;
+        const broken = entry.state === "failed" || entry.state === "closed";
+        if (!stalled && !broken) continue;
+        this.closePeer(key, "retrying");
+      }
+
+      const attempt = this.attempts.get(key) ?? { count: 0, nextAt: 0 };
+      if (attempt.count >= MAX_ATTEMPTS) continue;
+      if (now < attempt.nextAt) continue;
+
+      this.attempts.set(key, {
+        count: attempt.count + 1,
+        nextAt:
+          now +
+          (BACKOFF_MS[Math.min(attempt.count, BACKOFF_MS.length - 1)] ?? 0) +
+          NEGOTIATION_TIMEOUT_MS,
+      });
       this.openPeer(key);
     }
   }
@@ -93,6 +163,7 @@ export class PeerMesh {
       polite: !initiator,
       queuedCandidates: [],
       hasRemoteDescription: false,
+      startedAt: Date.now(),
     };
     this.peers.set(peerKey, entry);
 
@@ -109,9 +180,23 @@ export class PeerMesh {
 
     pc.onconnectionstatechange = () => {
       const current = this.peers.get(peerKey);
-      if (!current) return;
-      if (pc.connectionState === "failed" || pc.connectionState === "closed") {
-        current.state = pc.connectionState === "failed" ? "failed" : "closed";
+      if (!current || current.pc !== pc) return;
+      if (pc.connectionState === "failed") {
+        current.state = "failed";
+        this.emit();
+      } else if (pc.connectionState === "closed") {
+        current.state = "closed";
+        this.emit();
+      }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      const current = this.peers.get(peerKey);
+      if (!current || current.pc !== pc) return;
+      // Rebuilding beats an ICE restart here: it is one code path instead of
+      // two, and the retry machinery already exists.
+      if (pc.iceConnectionState === "failed") {
+        current.state = "failed";
         this.emit();
       }
     };
@@ -134,19 +219,22 @@ export class PeerMesh {
 
     dc.onopen = () => {
       const current = this.peers.get(peerKey);
-      if (!current) return;
+      if (!current || current.dc !== dc) return;
       current.state = "open";
+      // A pair that has connected once has proved it can, so let it start
+      // from scratch if it ever drops.
+      this.attempts.delete(peerKey);
       this.emit();
     };
     dc.onclose = () => {
       const current = this.peers.get(peerKey);
-      if (!current) return;
+      if (!current || current.dc !== dc) return;
       current.state = "closed";
       this.emit();
     };
     dc.onerror = () => {
       const current = this.peers.get(peerKey);
-      if (!current) return;
+      if (!current || current.dc !== dc) return;
       current.state = "failed";
       this.emit();
     };
@@ -176,9 +264,13 @@ export class PeerMesh {
 
   async handleSignal(fromPeer: string, signal: Signal) {
     if (this.disposed || !PeerMesh.supported) return;
+    if (fromPeer === this.options.selfKey) return;
 
     // A peer may signal us before presence has caught up.
-    if (!this.peers.has(fromPeer)) this.openPeer(fromPeer);
+    if (!this.peers.has(fromPeer)) {
+      this.wanted.add(fromPeer);
+      this.openPeer(fromPeer);
+    }
     const entry = this.peers.get(fromPeer);
     if (!entry) return;
 
@@ -220,7 +312,7 @@ export class PeerMesh {
       await entry.pc.addIceCandidate(candidate);
     } catch {
       // A negotiation that goes wrong is recoverable: mark the peer failed and
-      // let the next presence sync rebuild it. The relay covers the gap.
+      // let the next reconcile rebuild it. The relay covers the gap.
       entry.state = "failed";
       this.emit();
     }
@@ -260,6 +352,11 @@ export class PeerMesh {
       }
       missing.push(key);
     }
+    // A peer we have not built a connection for at all is still unreachable
+    // directly, and the caller has to know to relay to it.
+    for (const key of this.wanted) {
+      if (!this.peers.has(key)) missing.push(key);
+    }
     return { delivered, missing };
   }
 
@@ -269,9 +366,21 @@ export class PeerMesh {
       .map(([key]) => key);
   }
 
-  private closePeer(peerKey: string) {
+  private closePeer(peerKey: string, finalState?: PeerState) {
     const entry = this.peers.get(peerKey);
     if (!entry) return;
+    // Drop the handlers first: tearing the connection down fires state changes
+    // that would otherwise write over the entry replacing it.
+    entry.pc.onicecandidate = null;
+    entry.pc.onconnectionstatechange = null;
+    entry.pc.oniceconnectionstatechange = null;
+    entry.pc.ondatachannel = null;
+    if (entry.dc) {
+      entry.dc.onopen = null;
+      entry.dc.onclose = null;
+      entry.dc.onerror = null;
+      entry.dc.onmessage = null;
+    }
     try {
       entry.dc?.close();
     } catch {
@@ -283,19 +392,31 @@ export class PeerMesh {
       // Already gone.
     }
     this.peers.delete(peerKey);
-    this.emit();
+    if (finalState) {
+      // Surfaced so the UI can say "still trying" rather than implying the
+      // relay is the final answer.
+      this.emit({ [peerKey]: finalState });
+    } else {
+      this.emit();
+    }
   }
 
-  private emit() {
+  private emit(extra?: Record<string, PeerState>) {
     if (this.disposed) return;
-    const all: Record<string, PeerState> = {};
+    const all: Record<string, PeerState> = { ...extra };
     for (const [key, entry] of this.peers) all[key] = entry.state;
     this.options.onPeersChanged(this.openPeers, all);
   }
 
   close() {
     this.disposed = true;
+    if (this.ticker !== null && typeof window !== "undefined") {
+      window.clearInterval(this.ticker);
+    }
+    this.ticker = null;
     for (const key of [...this.peers.keys()]) this.closePeer(key);
     this.peers.clear();
+    this.attempts.clear();
+    this.wanted.clear();
   }
 }

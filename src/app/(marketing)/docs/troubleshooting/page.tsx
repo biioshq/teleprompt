@@ -61,17 +61,34 @@ export default function Page() {
       <ul>
         <li>Corporate or campus networks that block UDP or STUN.</li>
         <li>Symmetric NAT on one side, which STUN alone cannot get through.</li>
+      </ul>
+      <p>
+        The upgrade is retried in the background for about a minute, then left
+        alone. That is deliberate: the relay carries a session perfectly well,
+        and a pair that cannot reach each other will not start being able to.
+      </p>
+      <p>
+        <strong>Same Wi-Fi and still on the relay?</strong> Two causes account
+        for most of it, and neither is something the app can work around:
+      </p>
+      <ul>
         <li>
-          A VPN on one device, which usually prevents a direct route being
-          found.
+          <strong>Client isolation.</strong> Guest and venue networks very often
+          block traffic between devices on the same access point, on purpose.
+          Everything reaches the internet; nothing reaches the laptop two feet
+          away. A phone hotspot is the quickest way to confirm it: if the badge
+          flips to Direct there, the network was isolating clients.
+        </li>
+        <li>
+          <strong>A VPN on either device.</strong> It changes the route out and
+          usually hides the local addresses that would otherwise let the two
+          devices find each other on the LAN.
         </li>
       </ul>
       <p>
-        Putting both devices on the same Wi-Fi almost always produces a direct
-        connection. If you need direct routes on hostile networks, that requires
-        a TURN server, which the hosted instance does not run — it is on the
-        list of <Link href="/docs/contributing">things worth contributing</Link>
-        .
+        Beyond that, direct routes on genuinely hostile networks need a TURN
+        server, which the hosted instance does not run — it is on the list of{" "}
+        <Link href="/docs/contributing">things worth contributing</Link>.
       </p>
 
       <h2 id="catching-up">The badge says &ldquo;Catching up&rdquo;</h2>
