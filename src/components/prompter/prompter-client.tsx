@@ -350,7 +350,8 @@ function PrompterStage({
       {/* Top bar ---------------------------------------------------------- */}
       <header
         className={cn(
-          "absolute inset-x-0 top-0 z-20 flex items-center gap-4 px-5 py-4 transition-opacity duration-300",
+          "absolute inset-x-0 top-0 z-20 flex items-center gap-4 transition-opacity duration-300",
+          "pt-[calc(1rem+env(safe-area-inset-top))] pr-[calc(1.25rem+env(safe-area-inset-right))] pb-4 pl-[calc(1.25rem+env(safe-area-inset-left))]",
           "bg-gradient-to-b from-black/45 to-transparent",
           showChrome ? "opacity-100" : "pointer-events-none opacity-0",
         )}
@@ -414,7 +415,7 @@ function PrompterStage({
       {/* Bottom bar ------------------------------------------------------- */}
       <footer
         className={cn(
-          "absolute inset-x-0 bottom-0 z-20 px-5 pt-10 pb-[max(1rem,env(safe-area-inset-bottom))] transition-opacity duration-300",
+          "absolute inset-x-0 bottom-0 z-20 px-5 pt-10 pb-[calc(1rem+env(safe-area-inset-bottom))] transition-opacity duration-300",
           "bg-gradient-to-t from-black/55 to-transparent",
           showChrome ? "opacity-100" : "pointer-events-none opacity-0",
         )}
@@ -467,7 +468,7 @@ function PrompterStage({
 
       {/* Settings drawer -------------------------------------------------- */}
       {showSettings ? (
-        <aside className="absolute top-0 right-0 z-30 flex h-[100dvh] w-full max-w-sm flex-col border-l border-stage-line bg-stage-raised">
+        <aside className="absolute top-0 right-0 z-30 flex h-[100dvh] w-full max-w-sm flex-col border-l border-stage-line bg-stage-raised pad-safe-top pr-[env(safe-area-inset-right)] pad-safe-bottom">
           <div className="flex items-center justify-between border-b border-stage-line px-5 py-4">
             <span className="font-mono text-[0.6875rem] tracking-[0.14em] text-stage-muted uppercase">
               Display settings

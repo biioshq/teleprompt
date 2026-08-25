@@ -372,7 +372,7 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden bg-stage">
       {/* Header ----------------------------------------------------------- */}
-      <header className="flex shrink-0 items-center gap-3 border-b border-stage-line px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
+      <header className="flex shrink-0 items-center gap-3 border-b border-stage-line pt-[calc(0.75rem+env(safe-area-inset-top))] pr-[calc(1rem+env(safe-area-inset-right))] pb-3 pl-[calc(1rem+env(safe-area-inset-left))]">
         <DeviceMobile size={15} weight="bold" className="shrink-0 text-brand" />
         <span className="min-w-0 flex-1 truncate text-sm font-medium text-stage-ink">
           {room.title}
@@ -456,7 +456,7 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
       </div>
 
       {/* Controls --------------------------------------------------------- */}
-      <footer className="shrink-0 border-t border-stage-line px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <footer className="shrink-0 border-t border-stage-line px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <ProgressReadout
           engine={engine}
           totalWords={totalWords}
@@ -534,7 +534,7 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
           onClick={() => setShowSettings(false)}
         >
           <div
-            className="max-h-[85dvh] w-full overflow-y-auto overscroll-contain rounded-t-xl border-t border-stage-line bg-stage-raised px-5 pt-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+            className="max-h-[85dvh] w-full overflow-y-auto overscroll-contain rounded-t-xl border-t border-stage-line bg-stage-raised px-5 pt-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))]"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="mb-5 flex items-center justify-between">

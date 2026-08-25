@@ -11,7 +11,7 @@ export async function AppHeader() {
   const user = session?.user;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-paper/85 backdrop-blur-sm">
+    <header className="sticky top-0 z-40 border-b border-line bg-paper/85 pad-safe-top pad-safe-x backdrop-blur-sm">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-5">
         <Link href="/app" aria-label="Teleprompt">
           <Logo />

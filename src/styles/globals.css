@@ -186,6 +186,21 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
+/* Safe areas.
+   `viewport-fit: cover` means the page owns the notch, the rounded corners and
+   the home indicator. These sit on elements that have no padding of their own,
+   so they can be added without fighting a `p-*` utility for the same edge. */
+@utility pad-safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+@utility pad-safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+@utility pad-safe-x {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
 /* Editorial eyebrow above a heading. */
 @utility eyebrow {
   font-family: var(--font-mono);

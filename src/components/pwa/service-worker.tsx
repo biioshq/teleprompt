@@ -67,7 +67,7 @@ export function ServiceWorker() {
   if (!waiting) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center p-4 print:hidden">
+    <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] print:hidden">
       <div className="flex items-center gap-3 rounded-sm border border-ink bg-surface px-4 py-3 shadow-hard">
         <span className="text-sm text-ink">A new version is ready.</span>
         <button

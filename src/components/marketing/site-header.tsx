@@ -10,7 +10,7 @@ export async function SiteHeader() {
   const session = await auth();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-paper/80 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-line bg-paper/80 pad-safe-top pad-safe-x backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-8 px-5">
         <Link href="/" aria-label={SITE.name}>
           <Logo wordmarkClassName="text-[1.125rem]" markClassName="h-8 w-8" />

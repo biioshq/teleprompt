@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function OfflinePage() {
   return (
-    <main className="flex min-h-[100dvh] items-center justify-center px-6">
+    <main className="flex min-h-[100dvh] items-center justify-center px-6 pr-[calc(1.5rem+env(safe-area-inset-right))] pl-[calc(1.5rem+env(safe-area-inset-left))]">
       <div className="w-full max-w-md text-center">
         <Mark className="mx-auto h-12 w-12" />
         <h1 className="mt-8 text-3xl">You are offline</h1>

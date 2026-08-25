@@ -73,7 +73,21 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: SITE.name,
-    statusBarStyle: "black-translucent",
+    /**
+     * Not `black-translucent`, which was the original choice and was wrong.
+     *
+     * That style puts the page *under* the iOS status bar, so the clock and
+     * the carrier indicators sit on top of whatever is at the top of the page
+     * unless every surface pads itself by `safe-area-inset-top`. It also paints
+     * the status bar text white, which is invisible on this app's paper
+     * background - and most of the app, the dashboard and the editor included,
+     * is on paper.
+     *
+     * `default` has iOS reserve the bar and start the page below it. The
+     * prompter gives up going edge-to-edge under the clock, which the
+     * fullscreen button covers properly anyway.
+     */
+    statusBarStyle: "default",
   },
   formatDetection: {
     telephone: false,
@@ -94,7 +108,11 @@ export const viewport: Viewport = {
   ],
   width: "device-width",
   initialScale: 1,
-  // The prompter puts controls against the bottom edge on phones.
+  /**
+   * Still needed with `statusBarStyle: "default"`: the top inset goes to zero
+   * because iOS reserves the bar, but the home indicator and, in landscape,
+   * the notch are the app's problem either way.
+   */
   viewportFit: "cover",
 };
 
