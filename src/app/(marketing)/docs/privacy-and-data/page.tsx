@@ -54,8 +54,21 @@ export default function Page() {
             </td>
           </tr>
           <tr>
-            <td>Your scripts</td>
-            <td>So they are there on the other device.</td>
+            <td>Your scripts, and the folders you file them in</td>
+            <td>So they are there on the other device, and findable.</td>
+          </tr>
+          <tr>
+            <td>
+              Sharing grants: the email address you shared with, and the level
+            </td>
+            <td>
+              So that person can reach the script or folder. An address is
+              stored whether or not it has ever signed in — that is what lets a
+              grant be waiting for somebody rather than needing an invitation to
+              be accepted. Owners can see and remove the grants they made;
+              nobody else can read the list. See{" "}
+              <a href="/docs/folders-and-sharing">Folders and sharing</a>.
+            </td>
           </tr>
           <tr>
             <td>Rooms: the script snapshot, the state, the join code</td>
@@ -198,8 +211,16 @@ export default function Page() {
       <h2 id="delete">Deleting things</h2>
       <ul>
         <li>
-          Deleting a script deletes it, and detaches it from any room that used
-          it.
+          Deleting a script deletes it, detaches it from any room that used it,
+          and removes every grant that pointed at it.
+        </li>
+        <li>
+          Deleting a folder deletes the folders inside it and their grants. The
+          scripts are moved back to your top level, never deleted.
+        </li>
+        <li>
+          Removing somebody from a share deletes the grant outright. A copy they
+          made while they had access is their own script and stays theirs.
         </li>
         <li>
           Ending a room deletes its device records. The room row itself is

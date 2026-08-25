@@ -8,6 +8,9 @@
     "resolveJsonModule": true,
     "moduleDetection": "force",
     "isolatedModules": true,
+    /* Node runs the test files from source, so their imports carry a real
+       `.ts` extension. Nothing is emitted, so nothing has to rewrite them. */
+    "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
 
     /* Strictness */

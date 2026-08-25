@@ -17,6 +17,7 @@
     "start": "next start",
     "preview": "next build && next start",
     "typecheck": "tsc --noEmit",
+    "test": "node --test 'src/**/*.test.ts'",
     "format": "prettier --write \"**/*.{ts,tsx,js,mjs,cjs,json,css,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,cjs,json,css,md}\"",
     "brand": "node scripts/generate-brand-assets.mjs",

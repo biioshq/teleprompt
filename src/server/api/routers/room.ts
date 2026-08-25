@@ -15,8 +15,12 @@ import {
   normaliseJoinCode,
 } from "~/lib/utils";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { db as database } from "~/server/db";
+// Type-only: naming the client's type must not drag the client itself — and
+// its connection pool, and its environment validation — into every module that
+// mentions a query.
+import type { db as database } from "~/server/db";
 import { roomDevices, rooms, scripts } from "~/server/db/schema";
+import { requireScript, viewerFor } from "~/server/library/access";
 import { ROLES } from "~/lib/realtime/protocol";
 
 type Db = typeof database;
@@ -82,18 +86,17 @@ export const roomRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await endStaleRooms(ctx.db, ctx.session.user.id);
 
-      const script = await ctx.db.query.scripts.findFirst({
-        where: and(
-          eq(scripts.id, input.scriptId),
-          eq(scripts.ownerId, ctx.session.user.id),
-        ),
-      });
-      if (!script) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "That script does not exist, or is not yours.",
-        });
-      }
+      // Being able to read a script is enough to present it. View-only means
+      // you may not change the words, not that you may not say them — and the
+      // room that opens is yours: your join code, your devices, your position
+      // in the text. The owner's copy is untouched.
+      const viewer = await viewerFor(ctx.db, ctx.session.user.id);
+      const { script } = await requireScript(
+        ctx.db,
+        viewer,
+        input.scriptId,
+        "viewer",
+      );
 
       const code = await allocateJoinCode(ctx.db);
 
@@ -363,12 +366,18 @@ export const roomRouter = createTRPCRouter({
           message: "The script behind this room was deleted.",
         });
       }
-      const script = await ctx.db.query.scripts.findFirst({
-        where: and(
-          eq(scripts.id, room.scriptId),
-          eq(scripts.ownerId, ctx.session.user.id),
-        ),
-      });
+      // Read access, not ownership: a room opened from a script somebody
+      // shared has to be able to pull that script's later edits in, or it goes
+      // stale the moment its author fixes a line.
+      const viewer = await viewerFor(ctx.db, ctx.session.user.id);
+      const script = await requireScript(
+        ctx.db,
+        viewer,
+        room.scriptId,
+        "viewer",
+      )
+        .then((result) => result.script)
+        .catch(() => null);
       if (!script) {
         throw new TRPCError({
           code: "NOT_FOUND",

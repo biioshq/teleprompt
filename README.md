@@ -45,6 +45,7 @@ same text, set for a phone.
 | **Keyboard first**           | Space to roll, arrows to step and change pace, `F` fullscreen, `M` mirror. Presenter clickers work without setup.                                                                                                                             |
 | **Stays awake**              | The display holds a screen wake lock.                                                                                                                                                                                                         |
 | **Resumes**                  | Position is persisted, so a reload lands within a sentence of where you were.                                                                                                                                                                 |
+| **Folders and sharing**      | Nest scripts into folders, and share a script or a whole folder with an email address as **view only** or **editor**. Access inherits down the tree; view-only can still present. See `/docs/folders-and-sharing`.                            |
 | **More than two devices**    | A second display for a co-host, a second remote for a producer. One device drives; the rest follow.                                                                                                                                           |
 | **Voice tracking**           | _Experimental, off by default._ The display listens, greys out the words you have said and scrolls to keep up. Uses the browser's own speech recognition — no API key, nothing added to a self-hosted deployment. See `/docs/voice-tracking`. |
 
@@ -119,6 +120,7 @@ npm run dev        # dev server (turbo)
 npm run build      # production build
 npm run preview    # build, then serve — the service worker only runs here
 npm run typecheck  # tsc --noEmit, strict
+npm test           # node --test; the permission rules are pinned here
 npm run format     # prettier
 npm run db:push    # push the Drizzle schema
 npm run db:studio  # Drizzle Studio
@@ -174,6 +176,10 @@ src/
   components/
     brand/  ui/  marketing/  docs/  app/  pwa/
     prompter/              engine, canvas, session hooks
+  server/
+    library/
+      tree.ts              permission rules and folder maths, no queries
+      access.ts            loading, gates, and the library listings
   lib/
     markdown/blocks.ts     deterministic script splitter
     prompter/state.ts      state shape, limits, themes
@@ -193,7 +199,7 @@ scripts/
 The docs ship with the app, at `/docs`:
 
 - Quickstart, connecting devices, install as an app
-- Writing scripts, the remote, display settings, voice tracking, keyboard shortcuts
+- Writing scripts, folders and sharing, the remote, display settings, voice tracking, keyboard shortcuts
 - Architecture, privacy and data
 - Self-hosting, troubleshooting, contributing
 

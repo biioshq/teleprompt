@@ -9,8 +9,16 @@ import {
 } from "~/lib/markdown/blocks";
 import { parseState } from "~/lib/prompter/state";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { db as database } from "~/server/db";
+// Type-only: naming the client's type must not drag the client itself — and
+// its connection pool, and its environment validation — into every module that
+// mentions a query.
+import type { db as database } from "~/server/db";
 import { rooms, scripts } from "~/server/db/schema";
+import {
+  requireFolder,
+  requireScript,
+  viewerFor,
+} from "~/server/library/access";
 
 type Db = typeof database;
 type Script = typeof scripts.$inferSelect;
@@ -39,19 +47,6 @@ colons becomes a cue: visible to you, never read aloud.
 That is the whole product. Write, connect, present.
 `;
 
-async function requireScript(db: Db, id: string, ownerId: string) {
-  const script = await db.query.scripts.findFirst({
-    where: and(eq(scripts.id, id), eq(scripts.ownerId, ownerId)),
-  });
-  if (!script) {
-    throw new TRPCError({
-      code: "NOT_FOUND",
-      message: "That script does not exist, or is not yours.",
-    });
-  }
-  return script;
-}
-
 /**
  * Push an edited script into any room that is currently showing it.
  *
@@ -67,13 +62,14 @@ async function requireScript(db: Db, id: string, ownerId: string) {
  * shifts them by one - but it is far better than throwing them back to the top
  * of the script because a typo was fixed further down.
  */
-async function syncLiveRooms(db: Db, script: Script, ownerId: string) {
+async function syncLiveRooms(db: Db, script: Script) {
+  // Every live room showing this script, whoever opened it. A script can now
+  // be edited by somebody other than its owner and presented by somebody else
+  // again, and a room that is one edit behind is a room syncing two devices
+  // against two different texts — which is the failure this whole mechanism
+  // exists to prevent, regardless of whose account the room is on.
   const live = await db.query.rooms.findMany({
-    where: and(
-      eq(rooms.scriptId, script.id),
-      eq(rooms.ownerId, ownerId),
-      eq(rooms.status, "live"),
-    ),
+    where: and(eq(rooms.scriptId, script.id), eq(rooms.status, "live")),
   });
   if (live.length === 0) return;
 
@@ -109,6 +105,7 @@ async function syncLiveRooms(db: Db, script: Script, ownerId: string) {
 }
 
 export const scriptRouter = createTRPCRouter({
+  /** Everything on the account, ignoring folders. Used for search and pickers. */
   list: protectedProcedure.query(async ({ ctx }) => {
     return ctx.db.query.scripts.findMany({
       where: eq(scripts.ownerId, ctx.session.user.id),
@@ -118,7 +115,17 @@ export const scriptRouter = createTRPCRouter({
   }),
 
   byId: protectedProcedure.input(idInput).query(async ({ ctx, input }) => {
-    return requireScript(ctx.db, input.id, ctx.session.user.id);
+    const viewer = await viewerFor(ctx.db, ctx.session.user.id);
+    const { script, access } = await requireScript(
+      ctx.db,
+      viewer,
+      input.id,
+      "viewer",
+    );
+    // The editor needs to know before it renders whether the fields it is
+    // about to show are fields this person may change. Working it out from a
+    // failed save afterwards means letting them type first.
+    return { ...script, access };
   }),
 
   create: protectedProcedure
@@ -129,10 +136,20 @@ export const scriptRouter = createTRPCRouter({
           body: z.string().max(400_000).optional(),
           /** Seed a first-run script so the editor is never a blank page. */
           starter: z.boolean().optional(),
+          folderId: z.string().uuid().nullish(),
         })
         .optional(),
     )
     .mutation(async ({ ctx, input }) => {
+      const viewer = await viewerFor(ctx.db, ctx.session.user.id);
+
+      // A script's folder always belongs to the script's owner. That is the
+      // property that lets access to a folder imply access to what is listed
+      // inside it, so it is checked here rather than assumed.
+      if (input?.folderId) {
+        await requireFolder(ctx.db, viewer, input.folderId, "owner");
+      }
+
       const body = input?.body ?? (input?.starter ? STARTER_SCRIPT : "");
       const title =
         input?.title?.trim() ?? (body ? inferTitle(body) : "Untitled script");
@@ -140,7 +157,8 @@ export const scriptRouter = createTRPCRouter({
       const [created] = await ctx.db
         .insert(scripts)
         .values({
-          ownerId: ctx.session.user.id,
+          ownerId: viewer.id,
+          folderId: input?.folderId ?? null,
           title: title.slice(0, 200) || "Untitled script",
           body,
           wordCount: scriptWordCount(body),
@@ -165,7 +183,13 @@ export const scriptRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await requireScript(ctx.db, input.id, ctx.session.user.id);
+      const viewer = await viewerFor(ctx.db, ctx.session.user.id);
+      const { script } = await requireScript(
+        ctx.db,
+        viewer,
+        input.id,
+        "editor",
+      );
 
       const patch: Partial<typeof scripts.$inferInsert> = {};
       if (input.title !== undefined) {
@@ -175,36 +199,75 @@ export const scriptRouter = createTRPCRouter({
         patch.body = input.body;
         patch.wordCount = scriptWordCount(input.body);
       }
-      if (Object.keys(patch).length === 0) {
-        return requireScript(ctx.db, input.id, ctx.session.user.id);
-      }
+      if (Object.keys(patch).length === 0) return script;
 
       const [updated] = await ctx.db
         .update(scripts)
         .set(patch)
-        .where(
-          and(
-            eq(scripts.id, input.id),
-            eq(scripts.ownerId, ctx.session.user.id),
-          ),
-        )
+        .where(eq(scripts.id, input.id))
         .returning();
 
       if (input.body !== undefined) {
-        await syncLiveRooms(ctx.db, updated!, ctx.session.user.id);
+        await syncLiveRooms(ctx.db, updated!);
       }
 
       return updated!;
     }),
 
+  /**
+   * File a script somewhere else.
+   *
+   * Only the owner moves a script, even when somebody else may edit it: where
+   * a document lives is a property of the account it belongs to, and an editor
+   * rearranging your folders from inside a shared one is not editing.
+   */
+  move: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        folderId: z.string().uuid().nullable(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const viewer = await viewerFor(ctx.db, ctx.session.user.id);
+      await requireScript(ctx.db, viewer, input.id, "owner");
+      if (input.folderId) {
+        await requireFolder(ctx.db, viewer, input.folderId, "owner");
+      }
+
+      const [updated] = await ctx.db
+        .update(scripts)
+        .set({ folderId: input.folderId })
+        .where(eq(scripts.id, input.id))
+        .returning();
+      return updated!;
+    }),
+
+  /**
+   * Take a copy.
+   *
+   * Reading is enough: this is how somebody with view-only access makes a
+   * version they can change, and the copy is theirs outright. It lands at
+   * their top level rather than in the original's folder, which may not be
+   * theirs to file into.
+   */
   duplicate: protectedProcedure
     .input(idInput)
     .mutation(async ({ ctx, input }) => {
-      const source = await requireScript(ctx.db, input.id, ctx.session.user.id);
+      const viewer = await viewerFor(ctx.db, ctx.session.user.id);
+      const { script: source } = await requireScript(
+        ctx.db,
+        viewer,
+        input.id,
+        "viewer",
+      );
+      const mine = source.ownerId === viewer.id;
+
       const [copy] = await ctx.db
         .insert(scripts)
         .values({
-          ownerId: ctx.session.user.id,
+          ownerId: viewer.id,
+          folderId: mine ? source.folderId : null,
           title: `${source.title} (copy)`.slice(0, 200),
           body: source.body,
           wordCount: source.wordCount,
@@ -213,13 +276,11 @@ export const scriptRouter = createTRPCRouter({
       return copy!;
     }),
 
+  /** Only an owner deletes. An editor's mistake should not be unrecoverable. */
   remove: protectedProcedure.input(idInput).mutation(async ({ ctx, input }) => {
-    await requireScript(ctx.db, input.id, ctx.session.user.id);
-    await ctx.db
-      .delete(scripts)
-      .where(
-        and(eq(scripts.id, input.id), eq(scripts.ownerId, ctx.session.user.id)),
-      );
+    const viewer = await viewerFor(ctx.db, ctx.session.user.id);
+    await requireScript(ctx.db, viewer, input.id, "owner");
+    await ctx.db.delete(scripts).where(eq(scripts.id, input.id));
     return { id: input.id };
   }),
 });
