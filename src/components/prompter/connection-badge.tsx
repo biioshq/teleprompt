@@ -2,6 +2,7 @@
 
 import {
   Broadcast,
+  Database,
   DeviceMobile,
   Lightning,
   Monitor,
@@ -19,11 +20,11 @@ const TRANSPORT_COPY: Record<TransportMode, { label: string; detail: string }> =
   {
     direct: {
       label: "Direct",
-      detail: "Peer-to-peer data channel — nothing in between",
+      detail: "Peer-to-peer data channel - nothing in between",
     },
     relay: {
       label: "Relay",
-      detail: "Via the realtime relay — no direct route between these devices",
+      detail: "Via the realtime relay - no direct route between these devices",
     },
     alone: {
       label: "Waiting",
@@ -36,6 +37,7 @@ export function ConnectionBadge({
   transport,
   latencyMs,
   peers,
+  polling = false,
   className,
   tone = "stage",
 }: {
@@ -43,33 +45,49 @@ export function ConnectionBadge({
   transport: TransportMode;
   latencyMs: number | null;
   peers: PresencePeer[];
+  /** Position is coming from the database rather than from a peer. */
+  polling?: boolean;
   className?: string;
   tone?: "stage" | "paper";
 }) {
   const offline = status !== "online";
-  const copy = TRANSPORT_COPY[transport];
 
-  const Icon = offline
-    ? WifiSlash
-    : transport === "direct"
-      ? Lightning
-      : Broadcast;
+  const Icon = polling
+    ? Database
+    : offline
+      ? WifiSlash
+      : transport === "direct"
+        ? Lightning
+        : Broadcast;
 
-  const colour = offline
-    ? "text-coral"
-    : transport === "direct"
-      ? "text-brand"
-      : transport === "relay"
-        ? "text-blue"
-        : tone === "stage"
-          ? "text-stage-muted"
-          : "text-muted";
+  const colour = polling
+    ? "text-citrine"
+    : offline
+      ? "text-coral"
+      : transport === "direct"
+        ? "text-brand"
+        : transport === "relay"
+          ? "text-blue"
+          : tone === "stage"
+            ? "text-stage-muted"
+            : "text-muted";
+
+  const title = polling
+    ? "The realtime channel is not carrying traffic. Following the saved position instead, a couple of seconds behind."
+    : offline
+      ? "Reconnecting"
+      : TRANSPORT_COPY[transport].detail;
+
+  const label = polling
+    ? "Catching up"
+    : offline
+      ? status === "reconnecting"
+        ? "Reconnecting"
+        : "Connecting"
+      : TRANSPORT_COPY[transport].label;
 
   return (
-    <div
-      className={cn("flex items-center gap-2", className)}
-      title={offline ? "Reconnecting" : copy.detail}
-    >
+    <div className={cn("flex items-center gap-2", className)} title={title}>
       <Icon size={14} weight="bold" className={colour} />
       <span
         className={cn(
@@ -77,12 +95,8 @@ export function ConnectionBadge({
           tone === "stage" ? "text-stage-muted" : "text-muted",
         )}
       >
-        {offline
-          ? status === "reconnecting"
-            ? "Reconnecting"
-            : "Connecting"
-          : copy.label}
-        {latencyMs !== null && !offline ? (
+        {label}
+        {latencyMs !== null && !offline && !polling ? (
           <span className="ml-1.5 tabular opacity-70">{latencyMs}ms</span>
         ) : null}
       </span>

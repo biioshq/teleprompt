@@ -294,14 +294,60 @@ export function useRoomSession({
         }),
       });
     };
-    // Often enough that a reload lands you within a sentence of where you
-    // were, rare enough that it is invisible next to the realtime traffic.
-    const id = window.setInterval(flush, 6000);
+    // Normally this is only a safety net for reloads, so it stays rare enough
+    // to be invisible next to the realtime traffic. When the realtime path is
+    // unreliable it becomes the transport, and the row a follower polls is
+    // only as fresh as the last flush.
+    const id = window.setInterval(flush, link.degraded ? 2000 : 6000);
     return () => {
       window.clearInterval(id);
       flush();
     };
-  }, [driving, engine, room.id]);
+  }, [driving, engine, link.degraded, room.id]);
+
+  /* --- Fallback: the database as a slow transport ------------------------ */
+
+  /**
+   * Some networks will not carry a WebSocket at all, and a phone that has been
+   * in a pocket comes back with a socket that is open but dead. Rather than
+   * leave the remote frozen on a stale line, a device that cannot trust the
+   * realtime path reads the room's persisted state instead.
+   *
+   * It is coarse - a couple of seconds behind - but the follower still knows
+   * the pace and whether playback is running, so dead reckoning carries it
+   * between polls and the text keeps moving at the right speed. The moment the
+   * channel recovers, this switches itself off.
+   */
+  const fallbackEnabled = !driving && link.degraded;
+  const fallbackState = api.room.getState.useQuery(
+    { roomId: room.id },
+    {
+      enabled: fallbackEnabled,
+      refetchInterval: fallbackEnabled ? 2000 : false,
+      refetchIntervalInBackground: false,
+      staleTime: 0,
+      retry: false,
+    },
+  );
+
+  useEffect(() => {
+    if (!fallbackEnabled) return;
+    const data = fallbackState.data;
+    if (!data) return;
+
+    engine.receive({
+      anchor: data.state.anchor,
+      isPlaying: data.state.isPlaying,
+      speedWpm: data.state.speedWpm,
+    });
+    if (!sameSettings(data.state, stateRef.current)) {
+      stateRef.current = data.state;
+      setState(data.state);
+    }
+    if (data.contentRevision > room.contentRevision) {
+      onReloadRef.current?.();
+    }
+  }, [fallbackEnabled, fallbackState.data, engine, room.contentRevision]);
 
   /* --- Presence bookkeeping ---------------------------------------------- */
 
@@ -347,6 +393,9 @@ export function useRoomSession({
     peers: link.peers,
     transport: link.transport,
     latencyMs: link.latencyMs,
+    degraded: link.degraded,
+    /** True when position is coming from the database rather than a peer. */
+    polling: fallbackEnabled,
     announceReload: (contentRevision: number) =>
       sendRef.current({ t: "reload", contentRevision }),
   };

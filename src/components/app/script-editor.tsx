@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  ArrowRight,
   CheckCircle,
   CloudSlash,
   Play,
@@ -13,6 +14,7 @@ import {
 import { MarkdownEditor } from "~/components/app/markdown-editor";
 import { Cue } from "~/components/brand/cue";
 import { Button, ButtonLink } from "~/components/ui/button";
+import { LiveDot } from "~/components/ui/badge";
 import { splitIntoBlocks, spokenWordCount } from "~/lib/markdown/blocks";
 import { formatDuration, readingTimeSeconds } from "~/lib/prompter/state";
 import { pluralise } from "~/lib/utils";
@@ -38,9 +40,15 @@ export function ScriptEditor({ scriptId }: { scriptId: string }) {
     },
   });
 
+  // A script usually has at most one room open at a time. Opening a second one
+  // silently strands the code the other device is already holding, so the
+  // existing room is offered first and a new one has to be asked for.
+  const activeRoom = api.room.activeForScript.useQuery({ scriptId });
+
   const createRoom = api.room.create.useMutation({
     onSuccess: (room) => {
       void utils.room.listLive.invalidate();
+      void utils.room.activeForScript.invalidate({ scriptId });
       router.push(`/app/rooms/${room.id}`);
     },
   });
@@ -177,16 +185,48 @@ export function ScriptEditor({ scriptId }: { scriptId: string }) {
 
         {/* Sidebar -------------------------------------------------------- */}
         <aside className="space-y-6 lg:sticky lg:top-20 lg:self-start">
-          <Button
-            variant="brand"
-            size="lg"
-            className="w-full"
-            onClick={() => createRoom.mutate({ scriptId })}
-            disabled={createRoom.isPending || stats.words === 0}
-          >
-            <Play size={17} weight="fill" />
-            {createRoom.isPending ? "Opening room…" : "Start a session"}
-          </Button>
+          {activeRoom.data ? (
+            <div className="space-y-3">
+              <ButtonLink
+                href={`/app/rooms/${activeRoom.data.id}`}
+                variant="brand"
+                size="lg"
+                className="w-full"
+              >
+                <LiveDot />
+                Go to session
+                <ArrowRight size={16} weight="bold" />
+              </ButtonLink>
+              <p className="text-[0.75rem] leading-relaxed text-faint">
+                A room is already open on{" "}
+                <span className="font-mono tracking-[0.14em] text-muted">
+                  {activeRoom.data.code}
+                </span>
+                . Your other device is holding that code.
+              </p>
+              <button
+                type="button"
+                onClick={() => createRoom.mutate({ scriptId })}
+                disabled={createRoom.isPending || stats.words === 0}
+                className="text-[0.8125rem] text-muted underline underline-offset-4 transition-colors hover:text-ink disabled:opacity-50"
+              >
+                {createRoom.isPending
+                  ? "Opening…"
+                  : "Start a new session instead"}
+              </button>
+            </div>
+          ) : (
+            <Button
+              variant="brand"
+              size="lg"
+              className="w-full"
+              onClick={() => createRoom.mutate({ scriptId })}
+              disabled={createRoom.isPending || stats.words === 0}
+            >
+              <Play size={17} weight="fill" />
+              {createRoom.isPending ? "Opening room…" : "Start a session"}
+            </Button>
+          )}
           {stats.words === 0 ? (
             <p className="-mt-3 text-[0.75rem] leading-relaxed text-faint">
               Write something first — an empty script has nothing to scroll.

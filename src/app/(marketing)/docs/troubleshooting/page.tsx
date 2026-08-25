@@ -22,6 +22,7 @@ export default function Page() {
       toc={[
         { id: "code", label: "The code will not resolve" },
         { id: "relay", label: "It says Relay, not Direct" },
+        { id: "catching-up", label: "The badge says Catching up" },
         { id: "lag", label: "The two screens lag apart" },
         { id: "dim", label: "The display dims or sleeps" },
         { id: "mirror", label: "Mirrored text looks wrong" },
@@ -71,6 +72,19 @@ export default function Page() {
         a TURN server, which the hosted instance does not run — it is on the
         list of <Link href="/docs/contributing">things worth contributing</Link>
         .
+      </p>
+
+      <h2 id="catching-up">The badge says &ldquo;Catching up&rdquo;</h2>
+      <p>
+        The realtime channel is not carrying traffic, so this device is reading
+        the room&rsquo;s saved position over HTTPS instead of receiving it from
+        the other device. The session still works; it is a couple of seconds
+        behind, and it corrects itself as soon as the channel recovers.
+      </p>
+      <p>
+        It usually means a network that blocks WebSockets, or a socket that died
+        while the device was asleep. Bringing the app back to the foreground
+        forces a reconnect, as does moving to a different network.
       </p>
 
       <h2 id="lag">The two screens lag apart</h2>

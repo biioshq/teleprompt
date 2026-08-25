@@ -310,6 +310,7 @@ function PrompterStage({
             transport={session.transport}
             latencyMs={session.latencyMs}
             peers={session.peers}
+            polling={session.polling}
           />
           <span className="hidden font-mono text-[0.6875rem] tracking-[0.2em] text-stage-muted sm:inline">
             {room.code}

@@ -23,7 +23,7 @@ export default function Page() {
         { id: "problem", label: "The problem with scroll offsets" },
         { id: "anchors", label: "Anchors" },
         { id: "state", label: "The room state" },
-        { id: "transports", label: "Two transports" },
+        { id: "transports", label: "Three transports" },
         { id: "protocol", label: "The wire protocol" },
         { id: "authority", label: "Who drives" },
         { id: "reckoning", label: "Dead reckoning" },
@@ -120,7 +120,7 @@ blockFraction = (position - block.offsetTop) / block.height;`}</code>
         talk.
       </p>
 
-      <h2 id="transports">Two transports</h2>
+      <h2 id="transports">Three transports</h2>
       <p>
         Devices always meet on a Supabase Realtime channel named by the
         room&rsquo;s secret key. That works from anywhere and needs no luck with
@@ -142,6 +142,26 @@ blockFraction = (position - block.offsetTop) / block.height;`}</code>
       <p>
         Signalling itself always goes over the relay. It is what bootstraps the
         direct path, so it cannot depend on it.
+      </p>
+      <p>
+        Underneath both sits a third path that is not really a transport at all.
+        Some networks will not carry a WebSocket, and a phone returning from a
+        pocket often has a socket that is open but dead - nothing errors, the
+        client still believes it is subscribed, and messages simply stop. A
+        watchdog notices the silence, because pings run every five seconds and a
+        peer that has stopped answering two of them is not there. It rejoins the
+        channel, and in the meantime the device reads the room&rsquo;s saved
+        state over HTTPS instead.
+      </p>
+      <p>
+        That path is coarse, a couple of seconds behind, and it is deliberately
+        not a way of streaming position. It works because the snapshot carries
+        the pace and the play flag as well as the anchor, so the follower
+        extrapolates between polls and the text keeps moving at the right speed
+        rather than freezing and lurching. The connection badge reads{" "}
+        <em>Catching up</em> while this is happening, and the driver flushes
+        more often so there is something fresh to read. It switches itself off
+        the moment the channel recovers.
       </p>
 
       <h2 id="protocol">The wire protocol</h2>

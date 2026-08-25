@@ -182,6 +182,60 @@ export const roomRouter = createTRPCRouter({
     }));
   }),
 
+  /**
+   * The newest live room for a script, if there is one.
+   *
+   * Without this, the editor's only move is to open another room every time
+   * the button is pressed, stranding the code the other device already has.
+   */
+  activeForScript: protectedProcedure
+    .input(z.object({ scriptId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const room = await ctx.db.query.rooms.findFirst({
+        where: and(
+          eq(rooms.scriptId, input.scriptId),
+          eq(rooms.ownerId, ctx.session.user.id),
+          eq(rooms.status, "live"),
+        ),
+        orderBy: [desc(rooms.lastActiveAt)],
+        columns: {
+          id: true,
+          code: true,
+          title: true,
+          lastActiveAt: true,
+          createdAt: true,
+        },
+      });
+      return room ?? null;
+    }),
+
+  /**
+   * Just the playback state, kept deliberately small.
+   *
+   * This is the degraded path: when a device cannot hold a realtime channel,
+   * it polls this instead. Slower and coarser than the wire protocol, but it
+   * keeps a session usable on a network that blocks WebSockets entirely.
+   */
+  getState: protectedProcedure
+    .input(z.object({ roomId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const room = await ctx.db.query.rooms.findFirst({
+        where: and(
+          eq(rooms.id, input.roomId),
+          eq(rooms.ownerId, ctx.session.user.id),
+        ),
+        columns: { state: true, contentRevision: true, status: true },
+      });
+      if (!room) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Room not found." });
+      }
+      return {
+        state: parseState(room.state),
+        contentRevision: room.contentRevision,
+        status: room.status,
+      };
+    }),
+
   /** Register this browser as a device in the room and take a role. */
   join: protectedProcedure
     .input(z.object({ roomId: z.string().uuid(), device: deviceInput }))

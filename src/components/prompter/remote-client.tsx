@@ -213,6 +213,7 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
           transport={session.transport}
           latencyMs={session.latencyMs}
           peers={session.peers}
+          polling={session.polling}
         />
         <ExitLink roomId={room.id} />
       </header>
