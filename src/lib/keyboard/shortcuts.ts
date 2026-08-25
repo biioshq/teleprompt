@@ -38,15 +38,6 @@ export type Shortcut = {
   label: string;
   group: ShortcutGroup;
   surfaces: Surface[];
-  /**
-   * Only bound when the matching experiment is switched on.
-   *
-   * Listing it unconditionally would break the rule this registry exists to
-   * keep: a key that is in the list is a key that works. So the list is asked
-   * whether to include these, and the caller answers from the device's own
-   * experiment flags.
-   */
-  experimental?: true;
 };
 
 export const SHORTCUTS: Shortcut[] = [
@@ -101,7 +92,6 @@ export const SHORTCUTS: Shortcut[] = [
     label: "Follow your voice",
     group: "Playback",
     surfaces: ["prompter", "remote"],
-    experimental: true,
   },
   {
     action: "faster",
@@ -174,22 +164,12 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
   "The screen",
 ];
 
-export function shortcutsFor(
-  surface: Surface,
-  { experimental = false } = {},
-): Shortcut[] {
-  return SHORTCUTS.filter(
-    (shortcut) =>
-      shortcut.surfaces.includes(surface) &&
-      (experimental || !shortcut.experimental),
-  );
+export function shortcutsFor(surface: Surface): Shortcut[] {
+  return SHORTCUTS.filter((shortcut) => shortcut.surfaces.includes(surface));
 }
 
-export function groupedShortcuts(
-  surface: Surface,
-  options: { experimental?: boolean } = {},
-) {
-  const items = shortcutsFor(surface, options);
+export function groupedShortcuts(surface: Surface) {
+  const items = shortcutsFor(surface);
   return SHORTCUT_GROUPS.map((group) => ({
     group,
     items: items.filter((shortcut) => shortcut.group === group),

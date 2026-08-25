@@ -70,11 +70,10 @@ export default function PrivacyPage() {
           </li>
           <li>
             No audio or video reaches us, ever. Camera access is never requested
-            at all. The microphone is requested in exactly one place — the
-            optional Voice tracking experiment, which is off unless you switch
-            it on — and even then the audio goes to your browser&rsquo;s own
-            speech recognition, never to us: we receive no audio and store no
-            transcript. See{" "}
+            at all. The microphone is requested in exactly one place — voice
+            tracking, which only listens while you hold it on — and even then
+            the audio goes to your browser&rsquo;s own speech recognition, never
+            to us: we receive no audio and store no transcript. See{" "}
             <Link href="/docs/privacy-and-data#voice">Privacy and data</Link>{" "}
             for exactly what each browser does with it.
           </li>

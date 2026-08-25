@@ -7,7 +7,6 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 
 import { type VoiceState } from "~/components/prompter/use-voice-tracking";
-import { type Experiments } from "~/lib/experiments";
 import { VOICE_LANGUAGES } from "~/lib/voice/recognition";
 import { cn } from "~/lib/utils";
 
@@ -141,118 +140,92 @@ export function VoiceReadout({
 }
 
 /* -------------------------------------------------------------------------- */
-/* The experiment                                                             */
+/* Voice settings                                                             */
 /* -------------------------------------------------------------------------- */
 
 /**
- * The switch itself, and the disclosure that has to travel with it.
+ * The voice section of the settings sheet, and the disclosure that has to
+ * travel with it.
  *
  * Teleprompt otherwise never sends what you write or say anywhere but your own
- * devices, and in Chrome and Edge this feature does not hold that line — their
- * speech recognition streams the audio to the browser vendor. That is a
+ * devices, and this feature does not hold that line: in Chrome and Edge the
+ * browser's speech recognition streams the audio to the vendor. That is a
  * material change to what the product does with your voice, so it is stated
- * where the switch is rather than only in the documentation.
+ * next to the control rather than only in the documentation. It used to be
+ * attached to the switch that enabled the experiment; with no switch left to
+ * attach it to, it belongs here.
  */
-export function ExperimentsPanel({
-  experiments,
-  onChange,
+export function VoicePanel({
+  language,
+  onLanguageChange,
   listens,
   supported,
   unsupportedReason,
   className,
 }: {
-  experiments: Experiments;
-  onChange: <K extends keyof Experiments>(
-    key: K,
-    value: Experiments[K],
-  ) => void;
+  language: string;
+  onLanguageChange: (language: string) => void;
   /**
    * Whether this device would be the one holding the microphone.
    *
-   * False on a remote, where the same switch buys something narrower: a button
-   * that asks the display to listen, and the spoken words marked on the
-   * mirror. Neither needs recognition in the phone's own browser, so a phone
-   * that cannot do it is not blocked from either.
+   * False on a remote, where the button buys something narrower: it asks the
+   * display to listen, and marks the spoken words on the mirror. Neither needs
+   * recognition in the phone's own browser, so a phone that cannot do it is
+   * not blocked from either.
    */
   listens: boolean;
   supported: boolean;
   unsupportedReason: string | null;
   className?: string;
 }) {
-  const blocked = listens && !supported;
-
   return (
     <div className={cn("space-y-4", className)}>
-      <div className="flex items-baseline justify-between gap-3">
-        <span className="font-mono text-[0.625rem] tracking-[0.14em] text-stage-muted uppercase">
-          Experiments
-        </span>
-        <span className="rounded-xs border-l-2 border-l-brand bg-brand/10 px-2 py-0.5 font-mono text-[0.5625rem] tracking-[0.09em] text-brand uppercase">
-          Unfinished
-        </span>
-      </div>
+      <span className="block font-mono text-[0.625rem] tracking-[0.14em] text-stage-muted uppercase">
+        Voice
+      </span>
 
-      <label
-        className={cn(
-          "flex cursor-pointer items-start gap-3 rounded-sm border border-stage-line p-3 transition-colors",
-          experiments.voiceTracking && !blocked && "border-brand",
-          blocked && "cursor-not-allowed opacity-60",
-        )}
-      >
-        <input
-          type="checkbox"
-          className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-brand)]"
-          checked={experiments.voiceTracking}
-          disabled={blocked}
-          onChange={(event) => onChange("voiceTracking", event.target.checked)}
-        />
-        <span className="min-w-0">
-          <span className="block text-[0.875rem] font-medium text-stage-ink">
-            Voice tracking
-          </span>
-          <span className="mt-1 block text-[0.75rem] leading-relaxed text-stage-muted">
-            {listens
-              ? "This screen listens, marks the words you have said and scrolls to keep up, instead of moving at a set pace."
-              : "Adds a button that asks the display to follow the reader's voice, and marks the words already said on the mirror. The microphone stays on the display."}
-          </span>
-          {blocked ? (
-            <span className="mt-2 block text-[0.75rem] leading-relaxed text-coral">
-              {unsupportedReason}
-            </span>
-          ) : listens ? (
-            <span className="mt-2 block text-[0.75rem] leading-relaxed text-stage-muted">
-              Recognition is the browser&rsquo;s own. In Chrome and Edge that
-              means the audio goes to the browser vendor&rsquo;s speech service
-              — it never reaches Teleprompt, and nothing is recorded or stored,
-              but it does leave this device.
-            </span>
-          ) : null}
-        </span>
-      </label>
+      {listens && !supported ? (
+        <p className="rounded-sm border border-stage-line p-3 text-[0.75rem] leading-relaxed text-coral">
+          {unsupportedReason}
+        </p>
+      ) : listens ? (
+        <>
+          <p className="text-[0.75rem] leading-relaxed text-stage-muted">
+            Recognition is the browser&rsquo;s own. In Chrome and Edge that
+            means the audio goes to the browser vendor&rsquo;s speech service —
+            it never reaches Teleprompt, and nothing is recorded or stored, but
+            it does leave this device.
+          </p>
 
-      {experiments.voiceTracking && listens && supported ? (
-        <label className="block">
-          <span className="mb-1.5 block font-mono text-[0.625rem] tracking-[0.14em] text-stage-muted uppercase">
-            Spoken language
-          </span>
-          <select
-            value={experiments.voiceLanguage}
-            onChange={(event) => onChange("voiceLanguage", event.target.value)}
-            className="h-10 w-full rounded-sm border border-stage-line bg-stage px-3 text-[0.8125rem] text-stage-ink"
-          >
-            {VOICE_LANGUAGES.map((language) => (
-              <option key={language.tag} value={language.tag}>
-                {language.label}
-              </option>
-            ))}
-          </select>
-          <span className="mt-1.5 block text-[0.6875rem] leading-relaxed text-stage-muted">
-            Set on this device only. Matching assumes words are separated by
-            spaces, so scripts in Chinese, Japanese and Thai will not track
-            well.
-          </span>
-        </label>
-      ) : null}
+          <label className="block">
+            <span className="mb-1.5 block font-mono text-[0.625rem] tracking-[0.14em] text-stage-muted uppercase">
+              Spoken language
+            </span>
+            <select
+              value={language}
+              onChange={(event) => onLanguageChange(event.target.value)}
+              className="h-10 w-full rounded-sm border border-stage-line bg-stage px-3 text-[0.8125rem] text-stage-ink"
+            >
+              {VOICE_LANGUAGES.map((entry) => (
+                <option key={entry.tag} value={entry.tag}>
+                  {entry.label}
+                </option>
+              ))}
+            </select>
+            <span className="mt-1.5 block text-[0.6875rem] leading-relaxed text-stage-muted">
+              Set on this device only. Matching assumes words are separated by
+              spaces, so scripts in Chinese, Japanese and Thai will not track
+              well.
+            </span>
+          </label>
+        </>
+      ) : (
+        <p className="text-[0.75rem] leading-relaxed text-stage-muted">
+          The microphone lives on the display. The button here asks it to follow
+          the reader&rsquo;s voice, and the mirror marks the words already said.
+          Language is set on the display.
+        </p>
+      )}
     </div>
   );
 }

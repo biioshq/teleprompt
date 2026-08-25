@@ -81,9 +81,9 @@ export default function Page() {
         <li>No analytics, no tag manager, no third-party trackers.</li>
         <li>
           No recording of anything you say, and no camera access, ever. The
-          microphone is used in exactly one place — the{" "}
-          <Link href="/docs/voice-tracking">voice tracking</Link> experiment,
-          which is off until you switch it on, and is described in full{" "}
+          microphone is used in exactly one place —{" "}
+          <Link href="/docs/voice-tracking">voice tracking</Link>, which only
+          listens while you turn it on, and is described in full{" "}
           <a href="#voice">below</a>.
         </li>
         <li>No advertising identifiers, no fingerprinting.</li>
@@ -125,9 +125,8 @@ export default function Page() {
           devices list.
         </li>
         <li>
-          <code>teleprompt:experiments</code> — which unfinished features you
-          have switched on for this browser, and the language you picked for
-          voice recognition. Only written once you open Experiments.
+          <code>teleprompt:voice</code> — the language you picked for voice
+          recognition on this browser. Only written once you change it.
         </li>
       </ul>
       <p>
@@ -191,9 +190,9 @@ export default function Page() {
         never turn itself on because of a saved row.
       </p>
       <Note tone="coral" title="If this is not a trade you want">
-        Leave it off. It is off by default, it is per device rather than per
-        account, and every other part of Teleprompt works exactly as it does
-        without it.
+        Do not press the microphone. Nothing listens until you do, the browser
+        asks permission the first time regardless, and every other part of
+        Teleprompt works exactly as it does without it.
       </Note>
 
       <h2 id="delete">Deleting things</h2>

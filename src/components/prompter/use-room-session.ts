@@ -69,11 +69,10 @@ export function useRoomSession({
   /**
    * Whether this device is able and willing to listen.
    *
-   * Voice tracking is an experiment, switched on per device, and the
-   * microphone lives on whichever display is driving. A `voice` command from a
-   * remote is therefore a request, not an instruction: a display that has the
-   * experiment switched off declines it, and the state it broadcasts back is
-   * what the remote's button reflects.
+   * The microphone lives on whichever display is driving. A `voice` command
+   * from a remote is therefore a request, not an instruction: a display whose
+   * browser cannot recognise speech declines it, and the state it broadcasts
+   * back is what the remote's button reflects.
    */
   allowVoice?: boolean;
   /**

@@ -28,12 +28,6 @@ export default function Page() {
         { id: "limits", label: "Where it struggles" },
       ]}
     >
-      <Note tone="brand" title="Experimental">
-        Voice tracking is off by default, switched on per device, and not yet
-        something to rely on for a take you cannot repeat. Everything else in
-        Teleprompt works exactly as it does today with it switched off.
-      </Note>
-
       <p>
         Normally the display scrolls at a pace you set, and you read to keep up
         with it. Voice tracking turns that round. The display listens through
@@ -44,10 +38,9 @@ export default function Page() {
 
       <h2 id="turning-on">Turning it on</h2>
       <p>
-        On the display, open Settings and find <strong>Experiments</strong> at
-        the bottom, then tick <strong>Voice tracking</strong>. A microphone
-        button appears next to the transport controls, and the keyboard gets{" "}
-        <KbdCombo shortcut={{ keys: ["V"] }} />.
+        The microphone button sits next to the transport controls on the
+        display, and the keyboard gets <KbdCombo shortcut={{ keys: ["V"] }} />.
+        There is nothing to switch on first.
       </p>
       <p>
         The first time you press it the browser asks for permission to use the
@@ -57,11 +50,11 @@ export default function Page() {
         not here.
       </p>
       <p>
-        The switch is stored on the device you set it on, not on your account
-        and not in the room. Turning it on for a laptop does not turn it on for
-        your phone, which is deliberate: whether a browser can do this at all,
-        and whether you want it listening, are properties of the machine in
-        front of you.
+        Whether the room is following a voice is shared, like the pace and the
+        type size: turn it on from the phone and the display starts listening,
+        and both devices show it. The spoken language is the exception, and is
+        set on the display that does the listening, because it is a property of
+        that browser rather than of the room.
       </p>
 
       <h2 id="using">Using it</h2>
@@ -131,10 +124,9 @@ export default function Page() {
 
       <h2 id="remote">From the remote</h2>
       <p>
-        Switch the same experiment on for your phone and the remote gets a
-        microphone button too. It does not listen — the microphone stays on the
-        display, which is the device the person speaking is standing in front
-        of. The button asks the display to start and stop.
+        The remote has a microphone button too. It does not listen — the
+        microphone stays on the display, which is the device the person speaking
+        is standing in front of. The button asks the display to start and stop.
       </p>
       <p>
         The remote also greys out the spoken words on its mirror, which it can
@@ -142,9 +134,9 @@ export default function Page() {
         to, and everything above the reading line has been read.
       </p>
       <Note tone="blue" title="If the button does nothing">
-        The display has to have the experiment switched on as well. A display
-        that does not declines the request, and the remote says so after a
-        couple of seconds rather than leaving the button lit.
+        The display&rsquo;s browser has to support speech recognition. One that
+        does not declines the request, and the remote says so after a couple of
+        seconds rather than leaving the button lit.
       </Note>
 
       <h2 id="privacy">Where the audio goes</h2>
@@ -164,10 +156,10 @@ export default function Page() {
       </p>
       <p>
         This is the one place Teleprompt sends something you produce anywhere
-        other than your own devices, which is why it is behind a switch, why the
-        switch says so, and why it is off until you turn it on.{" "}
-        <a href="/docs/privacy-and-data">Privacy and data</a> covers everything
-        else.
+        other than your own devices, which is why the settings panel says so
+        next to the control, and why nothing listens until you press the
+        microphone. <a href="/docs/privacy-and-data">Privacy and data</a> covers
+        everything else.
       </p>
 
       <h2 id="limits">Where it struggles</h2>
@@ -180,8 +172,8 @@ export default function Page() {
         <li>
           <strong>Languages written without spaces</strong> — Chinese, Japanese,
           Thai. The matching works on whitespace-separated words, so scripts in
-          those languages will not track well. The language picker sits under
-          the experiment switch and is set per device.
+          those languages will not track well. The language picker is in the
+          display&rsquo;s settings and is set per device.
         </li>
         <li>
           <strong>Long silences.</strong> Browsers end a recognition session on

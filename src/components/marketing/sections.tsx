@@ -244,14 +244,7 @@ export function VoiceSection() {
     >
       <div className="mx-auto grid max-w-6xl gap-14 px-5 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
         <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Cue>experimental</Cue>
-            <span className="rounded-xs border-l-2 border-l-brand bg-brand-soft px-2 py-1 font-mono text-[0.625rem] tracking-[0.09em] text-brand-deep uppercase">
-              Off by default
-            </span>
-          </div>
-
-          <h2 className="mt-6 text-[clamp(1.9rem,4vw,2.75rem)]">
+          <h2 className="text-[clamp(1.9rem,4vw,2.75rem)]">
             Or stop setting a pace, and just talk.
           </h2>
 

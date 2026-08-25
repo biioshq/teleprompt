@@ -27,13 +27,10 @@ import { useRoomBootstrap } from "~/components/prompter/use-room-bootstrap";
 import { useRoomSession } from "~/components/prompter/use-room-session";
 import { ShortcutsOverlay } from "~/components/prompter/shortcuts-overlay";
 import { useScrub } from "~/components/prompter/use-scrub";
-import {
-  ExperimentsPanel,
-  VoiceButton,
-} from "~/components/prompter/voice-controls";
+import { VoiceButton, VoicePanel } from "~/components/prompter/voice-controls";
 import { useSpeechSupport } from "~/components/prompter/use-voice-tracking";
 import { Badge } from "~/components/ui/badge";
-import { useExperiments } from "~/lib/experiments";
+import { useVoicePreferences } from "~/lib/voice/preferences";
 import { type PrompterState } from "~/lib/prompter/state";
 import { mirrorFontSize } from "~/lib/prompter/mirror";
 import { useShortcuts } from "~/lib/keyboard/use-shortcuts";
@@ -111,7 +108,7 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const viewportWidth = useViewportWidth();
-  const [experiments, setExperiment] = useExperiments();
+  const [voicePrefs, setVoiceLanguage] = useVoicePreferences();
   const speech = useSpeechSupport();
 
   /**
@@ -143,10 +140,13 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
     role: "remote",
     onReload,
     deriveViewState,
-    // The remote never listens — it is not the device the reader is speaking
-    // in front of — but it does show which words have been said, which it can
-    // derive from the position it is already following.
-    words: experiments.voiceTracking,
+    /**
+     * The remote never listens — it is not the device the reader is speaking
+     * in front of — but it does show which words have been said, which it can
+     * derive from the position it is already following. Always rendered, so
+     * the display arming its microphone mid-take does not rebuild the mirror.
+     */
+    words: true,
   });
   const {
     state,
@@ -169,18 +169,16 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
    * the person reading from the display.
    */
   useEffect(() => {
-    engine.setSpokenFollowsPosition(
-      experiments.voiceTracking && state.voiceTracking,
-    );
-  }, [engine, experiments.voiceTracking, state.voiceTracking]);
+    engine.setSpokenFollowsPosition(state.voiceTracking);
+  }, [engine, state.voiceTracking]);
 
   /**
    * Whether the display took the request.
    *
    * The microphone belongs to the display, so this button is a request, and a
-   * display with the experiment switched off declines it. Without this the
-   * button would simply do nothing, which reads as a bug rather than as a
-   * setting on the other device.
+   * display whose browser cannot recognise speech declines it. Without this
+   * the button would simply do nothing, which reads as a bug rather than as a
+   * limitation of the other device.
    */
   const [voicePending, setVoicePending] = useState(false);
   const [voiceRefused, setVoiceRefused] = useState(false);
@@ -266,7 +264,6 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
       case "restart":
         return command({ k: "restart" });
       case "voice":
-        if (!experiments.voiceTracking) return;
         return toggleVoice();
       case "faster":
         return command({ k: "speed", delta: 10 });
@@ -416,7 +413,7 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
           viewportRef={viewportRef}
           contentRef={contentRef}
           interactive
-          words={experiments.voiceTracking}
+          words
         />
 
         <div className="absolute top-3 right-3 z-10 flex flex-col gap-1.5">
@@ -471,20 +468,18 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
             dispatch={command}
             size="lg"
           />
-          {experiments.voiceTracking ? (
-            <VoiceButton
-              on={state.voiceTracking}
-              busy={voicePending}
-              onToggle={toggleVoice}
-              size="lg"
-            />
-          ) : null}
+          <VoiceButton
+            on={state.voiceTracking}
+            busy={voicePending}
+            onToggle={toggleVoice}
+            size="lg"
+          />
         </div>
 
         {voiceRefused ? (
           <p className="mt-3 text-center text-[0.75rem] leading-snug text-coral">
-            The display did not start listening. Turn Voice tracking on in its
-            Experiments, on the screen itself.
+            The display did not start listening. Its browser may not support
+            speech recognition, or it declined the microphone.
           </p>
         ) : null}
 
@@ -524,7 +519,6 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
         surface="remote"
         open={showHelp}
         onClose={() => setShowHelp(false)}
-        experimental={experiments.voiceTracking}
       />
 
       {/* Settings sheet --------------------------------------------------- */}
@@ -562,9 +556,9 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
             />
 
             <div className="mt-8 border-t border-stage-line pt-6">
-              <ExperimentsPanel
-                experiments={experiments}
-                onChange={setExperiment}
+              <VoicePanel
+                language={voicePrefs.language}
+                onLanguageChange={setVoiceLanguage}
                 listens={false}
                 supported={speech.supported}
                 unsupportedReason={speech.reason}

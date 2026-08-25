@@ -19,11 +19,8 @@ export const metadata: Metadata = {
  * key that is listed here and vice versa. The prompter has the full set, so it
  * is the one worth tabulating; the only difference on the remote is called out
  * per row.
- *
- * Experimental keys are included here and marked, unlike in the in-app
- * overlay, which lists only what that device can actually do right now.
  */
-const SECTIONS = groupedShortcuts("prompter", { experimental: true });
+const SECTIONS = groupedShortcuts("prompter");
 
 export default function Page() {
   return (
@@ -73,14 +70,6 @@ export default function Page() {
                     {shortcut.surfaces.includes("remote") ? null : (
                       <span className="text-faint"> (display only)</span>
                     )}
-                    {shortcut.experimental ? (
-                      <span className="text-faint">
-                        {" "}
-                        (only once{" "}
-                        <a href="/docs/voice-tracking">voice tracking</a> is
-                        switched on)
-                      </span>
-                    ) : null}
                   </td>
                 </tr>
               ))}

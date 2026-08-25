@@ -95,7 +95,7 @@ export const prompterStateSchema = z.object({
 
   /**
    * Whether a device in this room is listening to the reader and scrolling to
-   * match. Experimental, and shared rather than local: the remote has to be
+   * match. Shared rather than local: the remote has to be
    * able to see that the display is listening, and to say when it should stop.
    *
    * Defaulted rather than required so that a room saved before this existed —

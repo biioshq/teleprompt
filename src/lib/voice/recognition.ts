@@ -281,7 +281,7 @@ export class SpeechListener {
           this.teardown();
           this.events.onStatus(
             "error",
-            `This browser cannot recognise ${this.language}. Pick another language in Experiments.`,
+            `This browser cannot recognise ${this.language}. Pick another language in settings.`,
           );
           return;
 

@@ -31,13 +31,13 @@ import {
   useVoiceTracking,
 } from "~/components/prompter/use-voice-tracking";
 import {
-  ExperimentsPanel,
   VoiceButton,
+  VoicePanel,
   VoiceReadout,
 } from "~/components/prompter/voice-controls";
 import { Badge } from "~/components/ui/badge";
 import { ButtonLink } from "~/components/ui/button";
-import { useExperiments } from "~/lib/experiments";
+import { useVoicePreferences } from "~/lib/voice/preferences";
 import { useShortcuts } from "~/lib/keyboard/use-shortcuts";
 import { useWakeLock } from "~/lib/pwa";
 import { cn } from "~/lib/utils";
@@ -90,24 +90,28 @@ function PrompterStage({
   room: Room;
   onReload: () => void;
 }) {
-  const [experiments, setExperiment] = useExperiments();
+  const [voicePrefs, setVoiceLanguage] = useVoicePreferences();
   const speech = useSpeechSupport();
   /**
    * The microphone lives on the display, because the display is the thing the
    * reader is looking at and speaking in front of. A remote can ask for it,
-   * but only a device that is both driving and has the experiment switched on
-   * ever actually listens.
+   * but only a driving display whose browser can actually recognise speech
+   * ever listens.
    */
-  const canListen = experiments.voiceTracking && speech.supported;
+  const canListen = speech.supported;
 
   const session = useRoomSession({
     room,
     role: "prompter",
     onReload,
     allowVoice: canListen,
-    // Rendered whenever the experiment is on rather than only while listening:
-    // toggling the microphone mid-take should not rebuild the whole script.
-    words: experiments.voiceTracking,
+    /**
+     * Always, rather than only while listening. Arming the microphone mid-take
+     * would otherwise rebuild the whole script, and a display that cannot
+     * listen still marks spoken words when another device is driving with
+     * voice on, so "supported" is not the right condition either.
+     */
+    words: true,
   });
   const {
     state,
@@ -141,23 +145,21 @@ function PrompterStage({
    * the marks a moment after they are set.
    */
   useEffect(() => {
-    engine.setSpokenFollowsPosition(
-      experiments.voiceTracking && state.voiceTracking && !listening,
-    );
-  }, [engine, experiments.voiceTracking, listening, state.voiceTracking]);
+    engine.setSpokenFollowsPosition(state.voiceTracking && !listening);
+  }, [engine, listening, state.voiceTracking]);
 
   const voice = useVoiceTracking({
     engine,
     active: listening,
     content: room.content,
-    language: experiments.voiceLanguage,
+    language: voicePrefs.language,
     onStop: stopVoice,
   });
 
   /**
-   * Playback moved to a display that cannot listen — the experiment is off
-   * there, or its browser has no recognition. Nobody is holding the
-   * microphone, so the room should stop saying that somebody is.
+   * Playback moved to a display that cannot listen — its browser has no
+   * recognition. Nobody is holding the microphone, so the room should stop
+   * saying that somebody is.
    */
   useEffect(() => {
     if (state.voiceTracking && driving && !canListen) {
@@ -344,7 +346,7 @@ function PrompterStage({
         state={state}
         viewportRef={viewportRef}
         contentRef={contentRef}
-        words={experiments.voiceTracking}
+        words
       />
 
       {/* Top bar ---------------------------------------------------------- */}
@@ -436,16 +438,14 @@ function PrompterStage({
                 isPlaying={state.isPlaying}
                 dispatch={dispatch}
               />
-              {experiments.voiceTracking ? (
-                <VoiceButton
-                  on={state.voiceTracking}
-                  busy={voice.status === "starting"}
-                  disabled={!speech.supported}
-                  onToggle={() =>
-                    dispatch({ k: "voice", on: !state.voiceTracking })
-                  }
-                />
-              ) : null}
+              <VoiceButton
+                on={state.voiceTracking}
+                busy={voice.status === "starting"}
+                disabled={!speech.supported}
+                onToggle={() =>
+                  dispatch({ k: "voice", on: !state.voiceTracking })
+                }
+              />
             </div>
             <ButtonLink
               href={`/remote/${room.id}`}
@@ -463,7 +463,6 @@ function PrompterStage({
         surface="prompter"
         open={showHelp}
         onClose={() => setShowHelp(false)}
-        experimental={experiments.voiceTracking}
       />
 
       {/* Settings drawer -------------------------------------------------- */}
@@ -490,9 +489,9 @@ function PrompterStage({
             />
 
             <div className="mt-8 border-t border-stage-line pt-6">
-              <ExperimentsPanel
-                experiments={experiments}
-                onChange={setExperiment}
+              <VoicePanel
+                language={voicePrefs.language}
+                onLanguageChange={setVoiceLanguage}
                 listens
                 supported={speech.supported}
                 unsupportedReason={speech.reason}

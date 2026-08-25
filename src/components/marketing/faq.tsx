@@ -27,11 +27,11 @@ const QUESTIONS = [
   },
   {
     q: "Does voice tracking send my audio anywhere?",
-    a: "It uses the speech recognition built into your browser, so where the audio goes is your browser's decision rather than ours. In Chrome and Edge it is streamed to the browser vendor's speech service; Safari does more of it on the device. Either way it never reaches Teleprompt, we receive no audio and store no transcript, and the feature is off until you switch it on in Experiments. Everything else in the app keeps working with it off.",
+    a: "It uses the speech recognition built into your browser, so where the audio goes is your browser's decision rather than ours. In Chrome and Edge it is streamed to the browser vendor's speech service; Safari does more of it on the device. Either way it never reaches Teleprompt, we receive no audio and store no transcript, and nothing listens until you press the microphone button.",
   },
   {
     q: "How well does voice tracking actually work?",
-    a: 'Well enough to present with, and it is marked experimental because "well enough" is not "always". It matches the last few words you said against the part of the script you were already in, so mishearings, ad-libs and skipped lines are absorbed. It struggles in a loud room, with heavy background music, and with languages that are not written with spaces between words.',
+    a: 'Well enough to present with, though "well enough" is not "always". It matches the last few words you said against the part of the script you were already in, so mishearings, ad-libs and skipped lines are absorbed. It struggles in a loud room, with heavy background music, and with languages that are not written with spaces between words.',
   },
   {
     q: "Is there a paid tier?",

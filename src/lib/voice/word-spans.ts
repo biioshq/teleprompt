@@ -12,8 +12,11 @@
  * *is* the DOM, so `data-tp-word` elements in document order are exactly the
  * words in reading order, and each one can be measured.
  *
- * Only ever applied when voice tracking is switched on. A long script is
- * thousands of extra nodes, and there is no reason to pay for them otherwise.
+ * Applied on every render of a room's script rather than only while the
+ * microphone is live. A long script is thousands of extra nodes, but arming
+ * the microphone mid-take would otherwise rebuild the whole canvas, and a
+ * device that is not listening still marks spoken words from the position it
+ * is following.
  */
 
 // `import type` rather than the inline-type form used elsewhere: `hast` is a

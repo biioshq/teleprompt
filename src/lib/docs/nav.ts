@@ -63,7 +63,7 @@ export const DOC_SECTIONS: DocSection[] = [
         slug: "voice-tracking",
         title: "Voice tracking",
         summary:
-          "Experimental: the display listens, marks the words you have said, and scrolls to keep up.",
+          "The display listens, marks the words you have said, and scrolls to keep up.",
       },
       {
         slug: "shortcuts",

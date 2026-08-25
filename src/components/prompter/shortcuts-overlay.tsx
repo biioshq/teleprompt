@@ -15,16 +15,13 @@ export function ShortcutsOverlay({
   surface,
   open,
   onClose,
-  experimental = false,
 }: {
   surface: Surface;
   open: boolean;
   onClose: () => void;
-  /** Include keys that only exist while an experiment is switched on. */
-  experimental?: boolean;
 }) {
   if (!open) return null;
-  const sections = groupedShortcuts(surface, { experimental });
+  const sections = groupedShortcuts(surface);
 
   return (
     <div
