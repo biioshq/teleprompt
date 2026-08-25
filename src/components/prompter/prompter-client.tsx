@@ -36,12 +36,20 @@ import { api } from "~/trpc/react";
 const CHROME_IDLE_MS = 2600;
 
 export function PrompterClient({ roomId }: { roomId: string }) {
-  const { room, isLoading, error, refetch } = useRoomBootstrap(
+  const { room, isLoading, error, refetch, slow } = useRoomBootstrap(
     roomId,
     "prompter",
   );
 
-  if (isLoading && !room) return <StageLoading label="Opening the room" />;
+  if (isLoading && !room) {
+    return (
+      <StageLoading
+        label="Opening the room"
+        slow={slow}
+        onRetry={() => void refetch()}
+      />
+    );
+  }
 
   // Only a room we never loaded is a dead end. A background refetch that
   // fails mid-session must not unmount the stage: that tears down the engine

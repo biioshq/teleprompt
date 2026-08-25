@@ -44,12 +44,20 @@ function buzz(ms = 8) {
 }
 
 export function RemoteClient({ roomId }: { roomId: string }) {
-  const { room, isLoading, error, refetch } = useRoomBootstrap(
+  const { room, isLoading, error, refetch, slow } = useRoomBootstrap(
     roomId,
     "remote",
   );
 
-  if (isLoading && !room) return <StageLoading label="Connecting the remote" />;
+  if (isLoading && !room) {
+    return (
+      <StageLoading
+        label="Connecting the remote"
+        slow={slow}
+        onRetry={() => void refetch()}
+      />
+    );
+  }
 
   // Only a room we never loaded is a dead end. A background refetch that
   // fails mid-session must not unmount the stage: that tears down the engine
