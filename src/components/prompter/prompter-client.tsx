@@ -1,7 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowsOut, Gear, Monitor, X } from "@phosphor-icons/react/dist/ssr";
+import {
+  ArrowsOut,
+  Gear,
+  Keyboard,
+  Monitor,
+  X,
+} from "@phosphor-icons/react/dist/ssr";
 
 import { ConnectionBadge } from "~/components/prompter/connection-badge";
 import {
@@ -18,9 +24,11 @@ import {
 import { ScriptCanvas } from "~/components/prompter/script-canvas";
 import { useRoomBootstrap } from "~/components/prompter/use-room-bootstrap";
 import { useRoomSession } from "~/components/prompter/use-room-session";
+import { ShortcutsOverlay } from "~/components/prompter/shortcuts-overlay";
 import { useScrub } from "~/components/prompter/use-scrub";
 import { Badge } from "~/components/ui/badge";
 import { ButtonLink } from "~/components/ui/button";
+import { useShortcuts } from "~/lib/keyboard/use-shortcuts";
 import { useWakeLock } from "~/lib/pwa";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
@@ -72,6 +80,7 @@ function PrompterStage({
 
   const [showChrome, setShowChrome] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const idleTimer = useRef<number | null>(null);
   const endRoom = api.room.end.useMutation();
 
@@ -112,118 +121,53 @@ function PrompterStage({
 
   /* --- Keyboard ---------------------------------------------------------- */
 
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (
-        target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.isContentEditable)
-      ) {
-        return;
-      }
-
-      const handled = () => {
-        event.preventDefault();
-        wake();
-      };
-
-      switch (event.key) {
-        case " ":
-          handled();
-          dispatch({ k: "toggle" });
-          return;
-        case "ArrowDown":
-        case "j":
-          handled();
-          dispatch({ k: "step", blocks: 1 });
-          return;
-        case "ArrowUp":
-        case "k":
-          handled();
-          dispatch({ k: "step", blocks: -1 });
-          return;
-        case "ArrowRight":
-          handled();
-          dispatch({ k: "speed", delta: 10 });
-          return;
-        case "ArrowLeft":
-          handled();
-          dispatch({ k: "speed", delta: -10 });
-          return;
-        case "PageDown":
-          handled();
-          dispatch({ k: "scrub", delta: 0.8 });
-          return;
-        case "PageUp":
-          handled();
-          dispatch({ k: "scrub", delta: -0.8 });
-          return;
-        case "Home":
-          handled();
-          dispatch({ k: "restart" });
-          return;
-        case "r":
-        case "R":
-          handled();
-          dispatch({ k: "restart" });
-          return;
-        case "m":
-        case "M":
-          handled();
-          dispatch({
-            k: "settings",
-            patch: { flipHorizontal: !state.flipHorizontal },
-          });
-          return;
-        case "+":
-        case "=":
-          handled();
-          dispatch({
-            k: "settings",
-            patch: { fontSize: state.fontSize + 4 },
-          });
-          return;
-        case "-":
-        case "_":
-          handled();
-          dispatch({
-            k: "settings",
-            patch: { fontSize: state.fontSize - 4 },
-          });
-          return;
-        case "f":
-        case "F":
-          handled();
-          void toggleFullscreen();
-          return;
-        case "s":
-        case "S":
-          handled();
-          setShowSettings((open) => !open);
-          return;
-        case "Escape":
-          if (showSettings) {
-            handled();
-            setShowSettings(false);
-          }
-          return;
-        default:
-          return;
-      }
-    };
-
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [
-    dispatch,
-    showSettings,
-    state.flipHorizontal,
-    state.fontSize,
-    toggleFullscreen,
-    wake,
-  ]);
+  useShortcuts((action) => {
+    wake();
+    switch (action) {
+      case "toggle":
+        return dispatch({ k: "toggle" });
+      case "next":
+        return dispatch({ k: "step", blocks: 1 });
+      case "previous":
+        return dispatch({ k: "step", blocks: -1 });
+      case "pageForward":
+        return dispatch({ k: "scrub", delta: 0.8 });
+      case "pageBack":
+        return dispatch({ k: "scrub", delta: -0.8 });
+      case "restart":
+        return dispatch({ k: "restart" });
+      case "faster":
+        return dispatch({ k: "speed", delta: 10 });
+      case "slower":
+        return dispatch({ k: "speed", delta: -10 });
+      case "larger":
+        return dispatch({
+          k: "settings",
+          patch: { fontSize: state.fontSize + 4 },
+        });
+      case "smaller":
+        return dispatch({
+          k: "settings",
+          patch: { fontSize: state.fontSize - 4 },
+        });
+      case "mirror":
+        return dispatch({
+          k: "settings",
+          patch: { flipHorizontal: !state.flipHorizontal },
+        });
+      case "fullscreen":
+        return void toggleFullscreen();
+      case "settings":
+        setShowHelp(false);
+        return setShowSettings((open) => !open);
+      case "help":
+        setShowSettings(false);
+        return setShowHelp((open) => !open);
+      case "close":
+        setShowHelp(false);
+        return setShowSettings(false);
+    }
+  });
 
   /* --- Wheel and drag scrubbing ------------------------------------------ */
 
@@ -325,6 +269,15 @@ function PrompterStage({
           </button>
           <button
             type="button"
+            onClick={() => setShowHelp(true)}
+            aria-label="Keyboard shortcuts"
+            title="Keyboard shortcuts"
+            className="text-stage-muted transition-colors hover:text-stage-ink"
+          >
+            <Keyboard size={17} weight="bold" />
+          </button>
+          <button
+            type="button"
             onClick={() => setShowSettings((open) => !open)}
             aria-label="Settings"
             aria-pressed={showSettings}
@@ -372,6 +325,12 @@ function PrompterStage({
           </div>
         </div>
       </footer>
+
+      <ShortcutsOverlay
+        surface="prompter"
+        open={showHelp}
+        onClose={() => setShowHelp(false)}
+      />
 
       {/* Settings drawer -------------------------------------------------- */}
       {showSettings ? (

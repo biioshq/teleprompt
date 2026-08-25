@@ -17,11 +17,3 @@ export function Card({
     </Tag>
   );
 }
-
-export function Kbd({ children }: { children: React.ReactNode }) {
-  return (
-    <kbd className="inline-flex h-[1.4rem] min-w-[1.4rem] items-center justify-center rounded-xs border border-line bg-paper px-1.5 font-mono text-[0.6875rem] font-medium text-ink">
-      {children}
-    </kbd>
-  );
-}

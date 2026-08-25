@@ -6,6 +6,7 @@ import {
   ArrowsOutLineVertical,
   DeviceMobile,
   Gear,
+  Keyboard,
   X,
 } from "@phosphor-icons/react/dist/ssr";
 
@@ -24,9 +25,11 @@ import {
 import { ScriptCanvas } from "~/components/prompter/script-canvas";
 import { useRoomBootstrap } from "~/components/prompter/use-room-bootstrap";
 import { useRoomSession } from "~/components/prompter/use-room-session";
+import { ShortcutsOverlay } from "~/components/prompter/shortcuts-overlay";
 import { useScrub } from "~/components/prompter/use-scrub";
 import { Badge } from "~/components/ui/badge";
 import { clamp, type PrompterState } from "~/lib/prompter/state";
+import { useShortcuts } from "~/lib/keyboard/use-shortcuts";
 import { useWakeLock } from "~/lib/pwa";
 
 /** Distance a finger may travel before a tap becomes a scrub. */
@@ -68,6 +71,7 @@ type Room = NonNullable<ReturnType<typeof useRoomBootstrap>["room"]>;
 function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
   const [mirrorIndex, setMirrorIndex] = useState(1);
   const [showSettings, setShowSettings] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   /**
    * The remote deliberately does *not* render at the display's type size. It
@@ -131,6 +135,61 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
     },
     [dispatch],
   );
+
+  /* --- Keyboard ----------------------------------------------------------- */
+
+  /**
+   * A remote is usually a phone, but not always: a tablet with a keyboard case,
+   * a laptop acting as the producer's remote, or a presenter clicker paired to
+   * either of them all land here. Clickers send Page Up and Page Down, so they
+   * work without any setup.
+   */
+  useShortcuts((action) => {
+    switch (action) {
+      case "toggle":
+        return command({ k: "toggle" });
+      case "next":
+        return command({ k: "step", blocks: 1 });
+      case "previous":
+        return command({ k: "step", blocks: -1 });
+      case "pageForward":
+        return command({ k: "scrub", delta: 0.8 });
+      case "pageBack":
+        return command({ k: "scrub", delta: -0.8 });
+      case "restart":
+        return command({ k: "restart" });
+      case "faster":
+        return command({ k: "speed", delta: 10 });
+      case "slower":
+        return command({ k: "speed", delta: -10 });
+      case "larger":
+        return dispatch({
+          k: "settings",
+          patch: { fontSize: state.fontSize + 4 },
+        });
+      case "smaller":
+        return dispatch({
+          k: "settings",
+          patch: { fontSize: state.fontSize - 4 },
+        });
+      case "mirror":
+        return dispatch({
+          k: "settings",
+          patch: { flipHorizontal: !state.flipHorizontal },
+        });
+      case "settings":
+        setShowHelp(false);
+        return setShowSettings((open) => !open);
+      case "help":
+        setShowSettings(false);
+        return setShowHelp((open) => !open);
+      case "close":
+        setShowHelp(false);
+        return setShowSettings(false);
+      case "fullscreen":
+        return;
+    }
+  });
 
   /* --- Tap to seek, drag to scrub ---------------------------------------- */
 
@@ -305,6 +364,15 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
           )}
           <button
             type="button"
+            onClick={() => setShowHelp(true)}
+            aria-label="Keyboard shortcuts"
+            title="Keyboard shortcuts"
+            className="hidden h-10 items-center rounded-full border border-stage-line px-3 text-stage-muted transition-colors hover:text-stage-ink [@media(pointer:fine)]:inline-flex"
+          >
+            <Keyboard size={15} weight="bold" />
+          </button>
+          <button
+            type="button"
             onClick={() => setShowSettings(true)}
             className="inline-flex h-10 items-center gap-2 rounded-full border border-stage-line px-4 text-[0.8125rem] text-stage-muted transition-colors hover:text-stage-ink"
           >
@@ -313,6 +381,12 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
           </button>
         </div>
       </footer>
+
+      <ShortcutsOverlay
+        surface="remote"
+        open={showHelp}
+        onClose={() => setShowHelp(false)}
+      />
 
       {/* Settings sheet --------------------------------------------------- */}
       {showSettings ? (

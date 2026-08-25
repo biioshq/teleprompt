@@ -43,6 +43,15 @@ export type RemoteSnapshot = {
 };
 
 const EMIT_INTERVAL_MS = 90;
+/**
+ * How long a received snapshot is allowed to decide the highlight.
+ *
+ * Comfortably longer than the ~90ms between broadcasts, and far shorter than
+ * the ~2s between polls on the degraded path, so the highlight follows the
+ * driver when the realtime link is alive and falls back to local geometry when
+ * it is not.
+ */
+const AUTHORITATIVE_HIGHLIGHT_MS = 400;
 /** Beyond this much drift, easing looks like a slow drag. Snap instead. */
 const SNAP_DISTANCE_FACTOR = 2.5;
 const FOLLOW_EASING = 0.18;
@@ -305,6 +314,9 @@ export class PrompterEngine {
   receive(snapshot: Omit<RemoteSnapshot, "receivedAt">) {
     this.remote = { ...snapshot, receivedAt: performance.now() };
     this.playing = snapshot.isPlaying;
+    // The highlight follows the snapshot, so it has to be re-evaluated even
+    // when the eased position has not moved far enough to force a frame.
+    this.render();
   }
 
   /* ---------------------------------------------------------------------- */
@@ -368,11 +380,40 @@ export class PrompterEngine {
     // it through React state would re-render the whole script sixty times a
     // second to change one class name.
     if (!this.highlightEnabled) return;
-    const index = this.getAnchor().blockIndex;
+    const index = this.highlightIndex();
     if (index === this.activeIndex) return;
     this.nodes[this.activeIndex]?.removeAttribute("data-tp-active");
     this.nodes[index]?.setAttribute("data-tp-active", "true");
     this.activeIndex = index;
+  }
+
+  /**
+   * Which block to light up.
+   *
+   * A follower must not work this out from its own scroll position. It sits a
+   * fraction of a pixel behind the driver, which is invisible while scrolling
+   * and decisive at a block boundary: `blockIndex` flips at a hard threshold,
+   * so being 0.7px short of the next block's top highlights the previous line
+   * for as long as the driver takes to pull clear. The highlight then reads a
+   * whole line behind the display, which is exactly the thing a reader would
+   * trust and be misled by.
+   *
+   * So while the driver's word is fresh, take the block index from it and let
+   * only the scrolling be eased. If the snapshots have gone stale - the
+   * degraded polling path, or a dropped link - fall back to local geometry,
+   * which is approximately right rather than frozen.
+   */
+  private highlightIndex(): number {
+    if (this.mode === "follow" && this.remote && this.blocks.length > 0) {
+      const age = performance.now() - this.remote.receivedAt;
+      if (age <= AUTHORITATIVE_HIGHLIGHT_MS) {
+        return Math.min(
+          Math.max(0, this.remote.anchor.blockIndex),
+          this.blocks.length - 1,
+        );
+      }
+    }
+    return this.getAnchor().blockIndex;
   }
 
   /** Mark the block under the reading line with `data-tp-active`. */
