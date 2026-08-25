@@ -28,35 +28,32 @@ import { useRoomSession } from "~/components/prompter/use-room-session";
 import { ShortcutsOverlay } from "~/components/prompter/shortcuts-overlay";
 import { useScrub } from "~/components/prompter/use-scrub";
 import { Badge } from "~/components/ui/badge";
-import { clamp, type PrompterState } from "~/lib/prompter/state";
+import { type PrompterState } from "~/lib/prompter/state";
+import { mirrorFontSize } from "~/lib/prompter/mirror";
 import { useShortcuts } from "~/lib/keyboard/use-shortcuts";
 import { useWakeLock } from "~/lib/pwa";
 
 /** Distance a finger may travel before a tap becomes a scrub. */
 const TAP_SLOP_PX = 8;
 
-/**
- * The mirror's type size is derived from the room's shared size rather than
- * set independently.
- *
- * A phone is not a monitor, so it cannot simply use the display's pixel value.
- * But having a separate local size meant the two buttons over the mirror and
- * the identical-looking keyboard shortcut did different things: one resized
- * this device, the other resized the other one. Scaling the shared value keeps
- * the phone readable and makes every size control in the app mean the same
- * thing.
- */
-const MIRROR_SCALE = 0.34;
-const MIRROR_MIN = 15;
-const MIRROR_MAX = 34;
 const FONT_STEP = 4;
 
-function mirrorFontSize(sharedFontSize: number) {
-  return clamp(
-    Math.round(sharedFontSize * MIRROR_SCALE),
-    MIRROR_MIN,
-    MIRROR_MAX,
+/** The remote's mirror is full-bleed, so the window is a fair proxy. */
+function useViewportWidth() {
+  const [width, setWidth] = useState(() =>
+    typeof window === "undefined" ? 390 : window.innerWidth,
   );
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth);
+    onResize();
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
+    };
+  }, []);
+  return width;
 }
 
 function buzz(ms = 8) {
@@ -104,6 +101,7 @@ type Room = NonNullable<ReturnType<typeof useRoomBootstrap>["room"]>;
 function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const viewportWidth = useViewportWidth();
 
   /**
    * The remote deliberately does *not* render at the display's type size. It
@@ -117,7 +115,7 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
   const deriveViewState = useCallback(
     (state: PrompterState): PrompterState => ({
       ...state,
-      fontSize: mirrorFontSize(state.fontSize),
+      fontSize: mirrorFontSize(state.fontSize, viewportWidth),
       lineHeight: 1.45,
       contentWidth: 100,
       readingLine: 0.32,
@@ -126,7 +124,7 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
       showReadingLine: true,
       theme: "night",
     }),
-    [],
+    [viewportWidth],
   );
 
   const session = useRoomSession({
