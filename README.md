@@ -35,17 +35,18 @@ same text, set for a phone.
 
 ## Features
 
-|                              |                                                                                                                                     |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| **Markdown editor**          | Headings, lists, quotes, tables, and cues — `:: look at camera` — which show on the prompter and are never counted as spoken words. |
-| **Pace in words per minute** | Not pixels per second. 130 wpm is the same delivery speed on a phone and a 27-inch display.                                         |
-| **Tap to jump**              | Tap any line on the remote and the display goes there. Drag to scrub.                                                               |
-| **Mirror and flip**          | For beam-splitter glass and overhead rigs. Toggle from either device, mid-take.                                                     |
-| **Three surfaces**           | Night, amber and paper.                                                                                                             |
-| **Keyboard first**           | Space to roll, arrows to step and change pace, `F` fullscreen, `M` mirror. Presenter clickers work without setup.                   |
-| **Stays awake**              | The display holds a screen wake lock.                                                                                               |
-| **Resumes**                  | Position is persisted, so a reload lands within a sentence of where you were.                                                       |
-| **More than two devices**    | A second display for a co-host, a second remote for a producer. One device drives; the rest follow.                                 |
+|                              |                                                                                                                                                                                                                                               |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Markdown editor**          | Headings, lists, quotes, tables, and cues — `:: look at camera` — which show on the prompter and are never counted as spoken words.                                                                                                           |
+| **Pace in words per minute** | Not pixels per second. 130 wpm is the same delivery speed on a phone and a 27-inch display.                                                                                                                                                   |
+| **Tap to jump**              | Tap any line on the remote and the display goes there. Drag to scrub.                                                                                                                                                                         |
+| **Mirror and flip**          | For beam-splitter glass and overhead rigs. Toggle from either device, mid-take.                                                                                                                                                               |
+| **Three surfaces**           | Night, amber and paper.                                                                                                                                                                                                                       |
+| **Keyboard first**           | Space to roll, arrows to step and change pace, `F` fullscreen, `M` mirror. Presenter clickers work without setup.                                                                                                                             |
+| **Stays awake**              | The display holds a screen wake lock.                                                                                                                                                                                                         |
+| **Resumes**                  | Position is persisted, so a reload lands within a sentence of where you were.                                                                                                                                                                 |
+| **More than two devices**    | A second display for a co-host, a second remote for a producer. One device drives; the rest follow.                                                                                                                                           |
+| **Voice tracking**           | _Experimental, off by default._ The display listens, greys out the words you have said and scrolls to keep up. Uses the browser's own speech recognition — no API key, nothing added to a self-hosted deployment. See `/docs/voice-tracking`. |
 
 ## Stack
 
@@ -177,6 +178,8 @@ src/
     markdown/blocks.ts     deterministic script splitter
     prompter/state.ts      state shape, limits, themes
     realtime/              protocol, link, WebRTC mesh
+    voice/                 speech recognition, phrase alignment, word spans
+    experiments.ts         per-device flags for unfinished features
   server/
     api/routers/           tRPC: script, room
     auth/                  Auth.js config and guards
@@ -190,7 +193,7 @@ scripts/
 The docs ship with the app, at `/docs`:
 
 - Quickstart, connecting devices, install as an app
-- Writing scripts, the remote, display settings, keyboard shortcuts
+- Writing scripts, the remote, display settings, voice tracking, keyboard shortcuts
 - Architecture, privacy and data
 - Self-hosting, troubleshooting, contributing
 

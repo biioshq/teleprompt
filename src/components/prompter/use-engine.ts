@@ -19,12 +19,19 @@ export function useEngine({
   state,
   mode,
   highlight = false,
+  words = false,
   initialAnchor,
 }: {
   content: string;
   state: PrompterState;
   mode: EngineMode;
   highlight?: boolean;
+  /**
+   * Whether the canvas is rendering an element per word, and the engine should
+   * therefore measure them. Both sides have to agree: the index is built by
+   * reading the DOM, so it is empty unless the canvas put the words there.
+   */
+  words?: boolean;
   /**
    * Where the room was when it was last written to the database. Applied once,
    * after the first measure. Without this the position was persisted every few
@@ -88,12 +95,17 @@ export function useEngine({
     engine.setHighlight(highlight);
   }, [engine, highlight]);
 
+  useEffect(() => {
+    engine.setWordIndexing(words);
+  }, [engine, words]);
+
   // Anything that reflows the text.
   useLayoutEffect(() => {
     engine.measure();
   }, [
     engine,
     content,
+    words,
     state.fontSize,
     state.lineHeight,
     state.contentWidth,

@@ -10,6 +10,7 @@ import {
   InstallSection,
   OpenSourceSection,
   SyncExplainer,
+  VoiceSection,
   WritingSection,
 } from "~/components/marketing/sections";
 import { SITE } from "~/lib/site";
@@ -30,6 +31,7 @@ export default async function HomePage() {
       <Hero signedIn={signedIn} />
       <HowItWorks />
       <SyncExplainer />
+      <VoiceSection />
       <Features />
       <WritingSection />
       <InstallSection />

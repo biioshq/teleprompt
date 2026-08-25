@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 
 import { splitIntoBlocks, type Block } from "~/lib/markdown/blocks";
 import { THEME_TOKENS, type PrompterState } from "~/lib/prompter/state";
+import { rehypeWordSpans } from "~/lib/voice/word-spans";
 import { cn } from "~/lib/utils";
 
 /**
@@ -30,10 +31,17 @@ const INLINE_COMPONENTS = {
   ),
 };
 
-function Inline({ source }: { source: string }) {
+/**
+ * Only built when voice tracking needs it. A long script is several thousand
+ * extra elements, and nothing else in the app has any use for them.
+ */
+const WORD_PLUGINS = [rehypeWordSpans];
+
+function Inline({ source, words }: { source: string; words?: boolean }) {
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
+      rehypePlugins={words ? WORD_PLUGINS : undefined}
       components={INLINE_COMPONENTS}
       disallowedElements={["img", "h1", "h2", "h3", "h4", "h5", "h6"]}
       unwrapDisallowed
@@ -55,9 +63,19 @@ const HEADING_SIZE: Record<number, string> = {
 const BlockView = memo(function BlockView({
   block,
   interactive = false,
+  words = false,
 }: {
   block: Block;
   interactive?: boolean;
+  /**
+   * Wrap each word in its own element, so voice tracking can find it and light
+   * it up.
+   *
+   * Deliberately not applied to cues or code. Neither is ever read aloud, and
+   * the word list has to be exactly the spoken script — a cue counted as words
+   * would put every mark after it one line out.
+   */
+  words?: boolean;
 }) {
   const common = cn(
     "relative px-[0.1em] py-[0.32em] transition-opacity duration-300",
@@ -78,7 +96,7 @@ const BlockView = memo(function BlockView({
               block.level <= 2 && "mt-[0.5em]",
             )}
           >
-            <Inline source={block.source} />
+            <Inline source={block.source} words={words} />
           </div>
         );
 
@@ -96,7 +114,7 @@ const BlockView = memo(function BlockView({
               {block.ordered ? block.marker : "—"}
             </span>
             <span className="flex-1">
-              <Inline source={block.source} />
+              <Inline source={block.source} words={words} />
             </span>
           </div>
         );
@@ -104,7 +122,7 @@ const BlockView = memo(function BlockView({
       case "quote":
         return (
           <div className="border-l-[3px] border-current/25 pl-[0.6em] italic">
-            <Inline source={block.source} />
+            <Inline source={block.source} words={words} />
           </div>
         );
 
@@ -148,14 +166,17 @@ const BlockView = memo(function BlockView({
       case "table":
         return (
           <div className="overflow-x-auto text-[0.62em]">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={words ? WORD_PLUGINS : undefined}
+            >
               {block.source}
             </ReactMarkdown>
           </div>
         );
 
       default:
-        return <Inline source={block.source} />;
+        return <Inline source={block.source} words={words} />;
     }
   })();
 
@@ -177,6 +198,8 @@ export type ScriptCanvasProps = {
   contentRef: React.RefObject<HTMLDivElement | null>;
   /** Only affects the cursor — the container resolves which block was hit. */
   interactive?: boolean;
+  /** Render one element per word, for voice tracking. */
+  words?: boolean;
   className?: string;
   /** Shows the reading-line rule and the edge fades. */
   chrome?: boolean;
@@ -188,6 +211,7 @@ export function ScriptCanvas({
   viewportRef,
   contentRef,
   interactive = false,
+  words = false,
   className,
   chrome = true,
 }: ScriptCanvasProps) {
@@ -238,6 +262,7 @@ export function ScriptCanvas({
               key={block.index}
               block={block}
               interactive={interactive}
+              words={words && block.words > 0}
             />
           ))}
         </div>

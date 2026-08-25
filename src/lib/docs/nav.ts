@@ -60,6 +60,12 @@ export const DOC_SECTIONS: DocSection[] = [
           "Type size, column width, the reading line, mirroring, and the three surfaces.",
       },
       {
+        slug: "voice-tracking",
+        title: "Voice tracking",
+        summary:
+          "Experimental: the display listens, marks the words you have said, and scrolls to keep up.",
+      },
+      {
         slug: "shortcuts",
         title: "Keyboard shortcuts",
         summary: "Every key the display responds to.",

@@ -93,6 +93,16 @@ export const prompterStateSchema = z.object({
   showReadingLine: z.boolean(),
   theme: z.enum(PROMPTER_THEMES),
 
+  /**
+   * Whether a device in this room is listening to the reader and scrolling to
+   * match. Experimental, and shared rather than local: the remote has to be
+   * able to see that the display is listening, and to say when it should stop.
+   *
+   * Defaulted rather than required so that a room saved before this existed —
+   * and a device running a build from before it existed — still parses.
+   */
+  voiceTracking: z.boolean().default(false),
+
   /** Monotonic per-room counter. Higher revision wins on conflict. */
   revision: z.number().int().min(0),
   /** Epoch millis stamped by whichever device produced this revision. */
@@ -178,6 +188,7 @@ export const DEFAULT_PROMPTER_STATE: PrompterState = {
   flipVertical: false,
   showReadingLine: true,
   theme: "night",
+  voiceTracking: false,
   revision: 0,
   updatedAt: 0,
 };

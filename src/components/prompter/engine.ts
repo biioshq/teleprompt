@@ -21,6 +21,11 @@ import { type Anchor } from "~/lib/prompter/state";
  * time. Every other device runs in `follow` mode: it dead-reckons from the last
  * anchor it received and eases toward the prediction, so it moves smoothly at
  * 60fps off updates that arrive ten times a second.
+ *
+ * A driving device has a second pacer available: a voice target, set from what
+ * the reader is actually saying. When one is present it replaces the clock —
+ * the script stops being something that moves at a rate and becomes something
+ * that moves when they do.
  */
 
 export type EngineMode = "drive" | "follow";
@@ -56,6 +61,45 @@ const AUTHORITATIVE_HIGHLIGHT_MS = 400;
 const SNAP_DISTANCE_FACTOR = 2.5;
 const FOLLOW_EASING = 0.18;
 
+/**
+ * How hard the text is pulled toward the word being spoken.
+ *
+ * Gentler than the follower's easing on purpose. A follower is chasing a
+ * smooth ramp and can afford to be tight; a voice target arrives in steps, one
+ * phrase at a time, and tight easing turns each of those into a visible jerk
+ * under someone who is mid-sentence. Loose easing reads as the page keeping
+ * up, which is the impression the feature lives or dies on.
+ *
+ * Quoted per frame at 60Hz, like `FOLLOW_EASING`, and corrected by frame time
+ * at use so a 120Hz tablet does not scroll twice as eagerly as a laptop.
+ */
+const VOICE_EASING = 0.09;
+
+/**
+ * Vertical offset of a descendant from an ancestor, by layout rather than by
+ * bounding box.
+ *
+ * Deliberately not `getBoundingClientRect`: the canvas sits under a live
+ * `transform`, and for a beam-splitter rig under a flip as well, both of which
+ * a client rect reports and layout offsets do not.
+ *
+ * The chain is walked rather than assumed. `offsetTop` is measured from
+ * `offsetParent`, and that is usually the block — but not inside a table,
+ * where every engine reports the cell instead. A word in a table would
+ * otherwise measure as if it were at the top of the block.
+ */
+function offsetWithin(node: HTMLElement, ancestor: HTMLElement): number {
+  let total = 0;
+  let current: HTMLElement | null = node;
+  while (current && current !== ancestor) {
+    total += current.offsetTop;
+    current = current.offsetParent as HTMLElement | null;
+  }
+  // The chain left the block without passing through it — a `position: fixed`
+  // descendant would do this. One flat offset is a better guess than zero.
+  return current === ancestor ? total : node.offsetTop;
+}
+
 export class PrompterEngine {
   private viewport: HTMLElement | null = null;
   private content: HTMLElement | null = null;
@@ -80,6 +124,22 @@ export class PrompterEngine {
 
   private remote: RemoteSnapshot | null = null;
 
+  /* --- Voice tracking ---------------------------------------------------- */
+
+  /** Where the reader's voice says they are. Null when nothing is listening. */
+  private voiceTarget: Anchor | null = null;
+  private wordsEnabled = false;
+  private spokenFollowsPosition = false;
+  private wordNodes: HTMLElement[] = [];
+  private wordTexts: string[] = [];
+  /** Block each word belongs to, and its centre within that block, in pixels. */
+  private wordBlocks: number[] = [];
+  private wordOffsets: number[] = [];
+  /** Absolute distance from the top of the content, for locating a position. */
+  private wordTops: number[] = [];
+  private spokenWords = 0;
+  private cursorWord = -1;
+
   private frame: number | null = null;
   private lastFrameAt = 0;
   private lastEmitAt = 0;
@@ -88,6 +148,7 @@ export class PrompterEngine {
   private anchorListeners = new Set<(anchor: Anchor) => void>();
   private endListeners = new Set<() => void>();
   private tickListeners = new Set<(progress: number) => void>();
+  private seekListeners = new Set<() => void>();
 
   /* ---------------------------------------------------------------------- */
   /* Lifecycle                                                              */
@@ -107,6 +168,7 @@ export class PrompterEngine {
     this.anchorListeners.clear();
     this.endListeners.clear();
     this.tickListeners.clear();
+    this.seekListeners.clear();
   }
 
   private start() {
@@ -167,6 +229,8 @@ export class PrompterEngine {
 
     const last = next.at(-1);
     this.contentHeight = last ? last.top + last.height : this.paddingTop;
+
+    this.indexWords();
 
     if (anchor) {
       this.position = this.anchorToPosition(anchor);
@@ -275,6 +339,7 @@ export class PrompterEngine {
     this.position = this.anchorToPosition(anchor);
     this.render();
     this.emit(true);
+    this.announceSeek();
   }
 
   /** Move whole blocks — the remote's previous / next line buttons. */
@@ -301,6 +366,7 @@ export class PrompterEngine {
     );
     this.render();
     this.emit(true);
+    this.announceSeek();
   }
 
   /** Direct pixel nudge, used by wheel and drag gestures. */
@@ -308,6 +374,7 @@ export class PrompterEngine {
     this.position = this.clampPosition(this.position + pixels);
     this.render();
     this.emit(true);
+    this.announceSeek();
   }
 
   restart() {
@@ -324,6 +391,176 @@ export class PrompterEngine {
   }
 
   /* ---------------------------------------------------------------------- */
+  /* Voice tracking                                                         */
+  /* ---------------------------------------------------------------------- */
+
+  /**
+   * Start or stop maintaining the per-word index.
+   *
+   * Off by default and cheap to leave that way: nothing below runs, and the
+   * canvas is not asked to render the extra elements either.
+   */
+  setWordIndexing(enabled: boolean) {
+    if (enabled === this.wordsEnabled) return;
+    this.wordsEnabled = enabled;
+    if (enabled) {
+      this.measure();
+      return;
+    }
+    this.clearVoiceMarks();
+    this.wordNodes = [];
+    this.wordTexts = [];
+    this.wordBlocks = [];
+    this.wordOffsets = [];
+    this.wordTops = [];
+  }
+
+  /** Rebuild the index against whatever the browser has just laid out. */
+  private indexWords() {
+    this.wordNodes = [];
+    this.wordTexts = [];
+    this.wordBlocks = [];
+    this.wordOffsets = [];
+    this.wordTops = [];
+    if (!this.wordsEnabled) return;
+
+    for (let block = 0; block < this.nodes.length; block += 1) {
+      const node = this.nodes[block];
+      const top = this.blocks[block]?.top ?? 0;
+      if (!node) continue;
+      const spans = node.querySelectorAll<HTMLElement>("[data-tp-word]");
+      for (const span of spans) {
+        const offset = offsetWithin(span, node) + span.offsetHeight / 2;
+        this.wordNodes.push(span);
+        this.wordTexts.push(span.textContent ?? "");
+        this.wordBlocks.push(block);
+        this.wordOffsets.push(offset);
+        this.wordTops.push(top + offset);
+      }
+    }
+
+    // A reflow does not un-say anything, so the marks are re-applied to the
+    // nodes the browser has just handed back.
+    this.spokenWords = Math.min(this.spokenWords, this.wordNodes.length);
+    this.paintSpoken(0, this.wordNodes.length);
+    const cursor = this.cursorWord;
+    this.cursorWord = -1;
+    this.paintCursor(cursor);
+  }
+
+  /** The script as rendered, in reading order. */
+  getWordTexts(): string[] {
+    return this.wordTexts;
+  }
+
+  get wordCount() {
+    return this.wordNodes.length;
+  }
+
+  /** Where a given word sits, in the coordinates every device agrees on. */
+  anchorForWord(index: number): Anchor | null {
+    if (this.wordNodes.length === 0) return null;
+    const clamped = Math.min(Math.max(0, index), this.wordNodes.length - 1);
+    const blockIndex = this.wordBlocks[clamped];
+    if (blockIndex === undefined) return null;
+    const block = this.blocks[blockIndex];
+    if (!block) return null;
+    const fraction =
+      block.height > 0 ? (this.wordOffsets[clamped] ?? 0) / block.height : 0;
+    return {
+      blockIndex,
+      blockFraction: Number(Math.min(1, Math.max(0, fraction)).toFixed(4)),
+    };
+  }
+
+  /** The word nearest the reading line — used to re-place a lost tracker. */
+  wordAtReadingLine(): number {
+    if (this.wordTops.length === 0) return 0;
+    let low = 0;
+    let high = this.wordTops.length - 1;
+    while (low < high) {
+      const mid = (low + high + 1) >> 1;
+      if ((this.wordTops[mid] ?? 0) <= this.position) low = mid;
+      else high = mid - 1;
+    }
+    return low;
+  }
+
+  /**
+   * Dim everything already said and mark the word coming next.
+   *
+   * Written straight to the DOM for the same reason the active-line highlight
+   * is: this changes several times a second and re-rendering a whole script
+   * through React to move one attribute would undo the point of the engine.
+   * Only the words between the old count and the new one are touched.
+   */
+  setSpokenWords(count: number) {
+    const next = Math.min(Math.max(0, count), this.wordNodes.length);
+    if (next !== this.spokenWords) {
+      const from = Math.min(next, this.spokenWords);
+      const to = Math.max(next, this.spokenWords);
+      this.spokenWords = next;
+      this.paintSpoken(from, to);
+    }
+    this.paintCursor(next < this.wordNodes.length ? next : -1);
+  }
+
+  private paintSpoken(from: number, to: number) {
+    for (let i = from; i < to; i += 1) {
+      const node = this.wordNodes[i];
+      if (!node) continue;
+      if (i < this.spokenWords) node.setAttribute("data-tp-spoken", "true");
+      else node.removeAttribute("data-tp-spoken");
+    }
+  }
+
+  private paintCursor(next: number) {
+    if (next === this.cursorWord) return;
+    if (this.cursorWord >= 0) {
+      this.wordNodes[this.cursorWord]?.removeAttribute("data-tp-cursor");
+    }
+    if (next >= 0) this.wordNodes[next]?.setAttribute("data-tp-cursor", "true");
+    this.cursorWord = next;
+  }
+
+  /** Forget who said what. Called when voice tracking stops. */
+  clearVoiceMarks() {
+    this.setSpokenWords(0);
+    this.paintCursor(-1);
+    this.voiceTarget = null;
+  }
+
+  /**
+   * Hand the engine the position the reader's voice is at.
+   *
+   * The engine eases toward it rather than jumping: a phrase places the reader
+   * several words further on at once, and snapping there each time would make
+   * the page twitch in time with their speech.
+   */
+  setVoiceTarget(anchor: Anchor | null) {
+    this.voiceTarget = anchor;
+  }
+
+  get hasVoiceTarget() {
+    return this.voiceTarget !== null;
+  }
+
+  /**
+   * Keep the spoken marks in step with the scroll position instead of with a
+   * microphone.
+   *
+   * This is how a remote shows the same thing as the display without listening
+   * to anything. It only sees the driver's anchor, which is enough: everything
+   * above the reading line has been read.
+   */
+  setSpokenFollowsPosition(enabled: boolean) {
+    if (this.spokenFollowsPosition === enabled) return;
+    this.spokenFollowsPosition = enabled;
+    if (!enabled) this.clearVoiceMarks();
+    else this.render();
+  }
+
+  /* ---------------------------------------------------------------------- */
   /* Frame loop                                                             */
   /* ---------------------------------------------------------------------- */
 
@@ -335,7 +572,19 @@ export class PrompterEngine {
     const before = this.position;
 
     if (this.mode === "drive") {
-      if (this.playing) {
+      if (this.voiceTarget) {
+        // The reader is the clock. `speedWpm` is not consulted at all while a
+        // voice target stands: a pace setting and a person's actual delivery
+        // are two different things, and only one of them is in the room.
+        const target = this.anchorToPosition(this.voiceTarget);
+        const drift = target - this.position;
+        if (Math.abs(drift) > this.viewportHeight * SNAP_DISTANCE_FACTOR) {
+          this.position = target;
+        } else {
+          const eased = 1 - (1 - VOICE_EASING) ** (deltaSeconds * 60);
+          this.position += drift * eased;
+        }
+      } else if (this.playing) {
         this.position +=
           this.pixelsPerSecond(this.settings.speedWpm) * deltaSeconds;
         if (this.position >= this.contentHeight) {
@@ -379,6 +628,13 @@ export class PrompterEngine {
     if (!this.content) return;
     const offset = this.paddingTop - this.position;
     this.content.style.transform = `translate3d(0, ${offset.toFixed(2)}px, 0)`;
+
+    // A device that is only watching derives the same marks from where the
+    // text has got to. `setSpokenWords` is a no-op when nothing changed, so
+    // this costs a binary search per frame and nothing else.
+    if (this.spokenFollowsPosition && this.wordNodes.length > 0) {
+      this.setSpokenWords(this.wordAtReadingLine());
+    }
 
     // The "line you are on" highlight is written straight to the DOM. Routing
     // it through React state would re-render the whole script sixty times a
@@ -474,5 +730,24 @@ export class PrompterEngine {
     return () => {
       this.tickListeners.delete(listener);
     };
+  }
+
+  /**
+   * Someone moved the text by hand: a tap, a drag, a step, a restart.
+   *
+   * Voice tracking has to hear about this. Its idea of where the reader is
+   * came from what they said, and a hand on the script overrides that
+   * completely — without this the next phrase would drag the page straight
+   * back to where it had been, which reads as the scrub having failed.
+   */
+  onSeek(listener: () => void) {
+    this.seekListeners.add(listener);
+    return () => {
+      this.seekListeners.delete(listener);
+    };
+  }
+
+  private announceSeek() {
+    for (const listener of this.seekListeners) listener();
   }
 }

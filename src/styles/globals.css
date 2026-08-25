@@ -444,6 +444,33 @@
     border-color: var(--color-paper);
   }
 
+  /* --- Voice tracking ---------------------------------------------------- */
+
+  /* Words the reader has already said recede toward the surface's dim tone,
+     so the live edge of the sentence is the brightest thing on the line. The
+     colours come from the active reading surface rather than being fixed
+     here, so this works the same on night, amber and paper. */
+  [data-tp-word] {
+    transition:
+      color 200ms ease,
+      opacity 200ms ease;
+  }
+  [data-tp-word][data-tp-spoken] {
+    color: var(--tp-dim);
+  }
+  /* The next word out, marked rather than highlighted: a block of colour under
+     the word you are about to say is exactly where you do not want your eye
+     pulled. A hairline under it is enough to find. */
+  [data-tp-word][data-tp-cursor] {
+    box-shadow: inset 0 -0.08em 0 0 var(--tp-rule);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-tp-word] {
+      transition: none;
+    }
+  }
+
   /* The prompter fades text in and out at the edges of the frame so the eye
      is drawn to the reading line rather than to whatever is at the top. */
   .stage-fade {

@@ -45,6 +45,13 @@ export const commandSchema = z.discriminatedUnion("k", [
   /** Fine scrub in reading-line heights, for a drag on the remote. */
   z.object({ k: z.literal("scrub"), delta: z.number().min(-40).max(40) }),
   z.object({ k: z.literal("restart") }),
+  /**
+   * Arm or disarm voice tracking on the display.
+   *
+   * The microphone always belongs to the device showing the words, because
+   * that is the device the reader is in front of. The remote only asks.
+   */
+  z.object({ k: z.literal("voice"), on: z.boolean() }),
   z.object({ k: z.literal("settings"), patch: prompterSettingsSchema }),
   z.object({
     k: z.literal("speed"),

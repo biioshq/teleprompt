@@ -10,11 +10,13 @@ import {
   GithubLogo,
   Keyboard,
   Lightning,
+  Microphone,
   Monitor,
   PencilSimpleLine,
   Sun,
   Textbox,
   UsersThree,
+  Waveform,
 } from "@phosphor-icons/react/dist/ssr";
 
 import { Cue } from "~/components/brand/cue";
@@ -210,6 +212,144 @@ export function SyncExplainer() {
               </li>
             ))}
           </ul>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Voice tracking                                                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The demo is a static picture of a real mechanism, not a fake of one: the
+ * words before the cursor carry the same dimming the prompter applies, and the
+ * marker under the next word is the same rule colour. Nothing here animates —
+ * a looping mock of a feature that depends on your microphone would be a
+ * promise the page is not in a position to make.
+ */
+const SPOKEN_DEMO = [
+  { text: "Every product starts as a sentence.", said: true },
+  { text: "Somebody said it out loud, badly, to three people.", said: true },
+  { text: "Our job", said: true },
+  { text: "is to keep that sentence intact.", said: false },
+];
+
+export function VoiceSection() {
+  return (
+    <section
+      id="voice"
+      className="border-y border-line bg-paper-deep py-20 lg:py-28"
+    >
+      <div className="mx-auto grid max-w-6xl gap-14 px-5 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+        <div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Cue>experimental</Cue>
+            <span className="rounded-xs border-l-2 border-l-brand bg-brand-soft px-2 py-1 font-mono text-[0.625rem] tracking-[0.09em] text-brand-deep uppercase">
+              Off by default
+            </span>
+          </div>
+
+          <h2 className="mt-6 text-[clamp(1.9rem,4vw,2.75rem)]">
+            Or stop setting a pace, and just talk.
+          </h2>
+
+          <p className="mt-6 max-w-md text-[1rem] leading-relaxed text-ink-soft">
+            Turn on voice tracking and the display listens. Words go grey as you
+            say them, and the script moves when you move — not at 130 words a
+            minute, not at whatever you guessed before you started. Pause to
+            take a question and it waits. Skip a sentence and it skips with you.
+          </p>
+
+          <dl className="mt-9 space-y-5">
+            {[
+              {
+                icon: Waveform,
+                title: "It finds your place, not your next word",
+                body: "The last few words you said are matched against the script around where you already were, so a misheard word, an ad-lib or a skipped line costs nothing. Lose the thread entirely and it searches the whole script to pick you back up.",
+              },
+              {
+                icon: Microphone,
+                title: "In the browser, with no account anywhere",
+                body: "It uses the speech recognition already built into Chrome, Edge and Safari. There is no key to get and no service to sign up for — including for anyone running their own copy.",
+              },
+              {
+                icon: DeviceMobile,
+                title: "The remote still runs the room",
+                body: "Start and stop listening from your phone, and watch the words grey out on the mirror as they are read. The microphone stays on the display, where the person speaking is.",
+              },
+            ].map((row) => (
+              <div key={row.title} className="flex gap-4">
+                <row.icon
+                  size={20}
+                  weight="bold"
+                  className="mt-0.5 shrink-0 text-brand"
+                />
+                <div>
+                  <dt className="text-[0.9375rem] font-semibold text-ink">
+                    {row.title}
+                  </dt>
+                  <dd className="mt-1.5 text-[0.875rem] leading-relaxed text-muted">
+                    {row.body}
+                  </dd>
+                </div>
+              </div>
+            ))}
+          </dl>
+
+          <Link
+            href="/docs/voice-tracking"
+            className="mt-8 inline-flex items-center gap-1.5 text-sm text-ink underline decoration-brand decoration-2 underline-offset-4"
+          >
+            How voice tracking works, and where it does not
+            <ArrowUpRight size={14} weight="bold" className="text-brand" />
+          </Link>
+        </div>
+
+        <div>
+          <div className="overflow-hidden rounded-md border border-ink bg-ink shadow-hard-lg">
+            <div className="flex items-center gap-3 border-b border-white/10 px-4 py-2.5">
+              <span className="animate-live inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
+              <span className="font-mono text-[0.625rem] tracking-[0.16em] text-white/40 uppercase">
+                Listening
+              </span>
+              <span className="ml-auto font-mono text-[0.6875rem] text-white/35 tabular">
+                18/32
+              </span>
+            </div>
+
+            <p className="px-6 py-8 text-[1.25rem] leading-[1.55] font-medium text-white sm:text-[1.4rem]">
+              {SPOKEN_DEMO.map((part, index) => (
+                <span
+                  key={part.text}
+                  className={part.said ? "text-white/30" : "text-white"}
+                >
+                  {part.text}
+                  {index === 2 ? (
+                    <span className="mx-[0.15em] inline-block h-[1.1em] w-[2px] translate-y-[0.18em] bg-brand" />
+                  ) : (
+                    " "
+                  )}
+                </span>
+              ))}
+            </p>
+
+            <div className="border-t border-white/10 px-4 py-3">
+              <p className="font-mono text-[0.6875rem] leading-relaxed text-white/45">
+                heard: &ldquo;somebody said it out loud badly to three people
+                our job&rdquo;
+              </p>
+            </div>
+          </div>
+
+          <p className="mt-4 text-[0.8125rem] leading-relaxed text-muted">
+            Recognition is your browser&rsquo;s, not ours. In Chrome and Edge
+            that means the audio goes to the browser vendor&rsquo;s speech
+            service — it never reaches Teleprompt, and nothing is recorded or
+            stored. If that is not a trade you want to make, leave it off:
+            everything else works exactly as it did.
+          </p>
         </div>
       </div>
     </section>

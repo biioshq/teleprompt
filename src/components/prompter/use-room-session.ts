@@ -48,7 +48,8 @@ function sameSettings(a: PrompterState, b: PrompterState) {
     a.flipHorizontal === b.flipHorizontal &&
     a.flipVertical === b.flipVertical &&
     a.showReadingLine === b.showReadingLine &&
-    a.theme === b.theme
+    a.theme === b.theme &&
+    a.voiceTracking === b.voiceTracking
   );
 }
 
@@ -58,11 +59,29 @@ export function useRoomSession({
   onReload,
   onEnded,
   deriveViewState,
+  allowVoice = false,
+  words = false,
 }: {
   room: RoomLike;
   role: Role;
   onReload?: () => void;
   onEnded?: () => void;
+  /**
+   * Whether this device is able and willing to listen.
+   *
+   * Voice tracking is an experiment, switched on per device, and the
+   * microphone lives on whichever display is driving. A `voice` command from a
+   * remote is therefore a request, not an instruction: a display that has the
+   * experiment switched off declines it, and the state it broadcasts back is
+   * what the remote's button reflects.
+   */
+  allowVoice?: boolean;
+  /**
+   * Whether the canvas below is rendering one element per word. Has to match
+   * what is passed to `ScriptCanvas`, or the engine measures an index that is
+   * not on screen.
+   */
+  words?: boolean;
   /**
    * The remote shows the same words as the display but at its own type size,
    * column width and orientation — a phone is not a monitor. Because devices
@@ -72,8 +91,19 @@ export function useRoomSession({
   deriveViewState?: (state: PrompterState) => PrompterState;
 }) {
   const [device] = useState(getDevice);
+  const allowVoiceRef = useRef(allowVoice);
+  allowVoiceRef.current = allowVoice;
   const [state, setState] = useState<PrompterState>(() =>
-    normaliseState({ ...DEFAULT_PROMPTER_STATE, ...room.state }),
+    normaliseState({
+      ...DEFAULT_PROMPTER_STATE,
+      ...room.state,
+      // Position, pace and type size are all worth restoring from the saved
+      // room. A microphone is not. The row is written every few seconds while
+      // a session runs, so a room left with voice tracking on would switch it
+      // back on by itself the next time it was opened — which is not a thing a
+      // microphone should ever do without being asked.
+      voiceTracking: false,
+    }),
   );
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -124,6 +154,7 @@ export function useRoomSession({
     state: viewState,
     mode: driving ? "drive" : "follow",
     highlight: true,
+    words,
     initialAnchor: room.state.anchor,
   });
 
@@ -164,18 +195,43 @@ export function useRoomSession({
   const applyCommand = useCallback(
     (command: Command) => {
       switch (command.k) {
+        // Transport and voice tracking are two pacers for the same text, so
+        // reaching for one always puts the other down. Leaving both running
+        // would have the clock and the reader fighting over the scroll.
         case "play":
           engine.setPlaying(true);
-          commit({ isPlaying: true });
+          engine.setVoiceTarget(null);
+          commit({ isPlaying: true, voiceTracking: false });
           return;
         case "pause":
           engine.setPlaying(false);
-          commit({ isPlaying: false });
+          engine.setVoiceTarget(null);
+          commit({ isPlaying: false, voiceTracking: false });
           return;
         case "toggle": {
+          // With voice tracking on, the first press means "stop following me"
+          // rather than "start the clock" — otherwise the only way to stop
+          // would be to reach for a different control than the one that is
+          // obviously the stop button.
+          if (stateRef.current.voiceTracking) {
+            engine.setPlaying(false);
+            engine.setVoiceTarget(null);
+            commit({ isPlaying: false, voiceTracking: false });
+            return;
+          }
           const next = !stateRef.current.isPlaying;
           engine.setPlaying(next);
           commit({ isPlaying: next });
+          return;
+        }
+        case "voice": {
+          // Declining is silent by design: the state broadcast that follows
+          // every other command still says `voiceTracking: false`, so the
+          // device that asked finds out the same way it finds out anything.
+          if (command.on && !allowVoiceRef.current) return;
+          engine.setPlaying(false);
+          if (!command.on) engine.setVoiceTarget(null);
+          commit({ isPlaying: false, voiceTracking: command.on });
           return;
         }
         case "seek":

@@ -25,6 +25,7 @@ export default function Page() {
         { id: "where", label: "Where it lives" },
         { id: "browser", label: "What stays in the browser" },
         { id: "wire", label: "What crosses the network" },
+        { id: "voice", label: "Voice tracking" },
         { id: "delete", label: "Deleting things" },
       ]}
     >
@@ -79,8 +80,11 @@ export default function Page() {
       <ul>
         <li>No analytics, no tag manager, no third-party trackers.</li>
         <li>
-          No recording of anything you say. Teleprompt has no microphone or
-          camera access at all.
+          No recording of anything you say, and no camera access, ever. The
+          microphone is used in exactly one place — the{" "}
+          <Link href="/docs/voice-tracking">voice tracking</Link> experiment,
+          which is off until you switch it on, and is described in full{" "}
+          <a href="#voice">below</a>.
         </li>
         <li>No advertising identifiers, no fingerprinting.</li>
         <li>
@@ -120,6 +124,11 @@ export default function Page() {
           <code>teleprompt.device.label</code> — the readable name shown in the
           devices list.
         </li>
+        <li>
+          <code>teleprompt:experiments</code> — which unfinished features you
+          have switched on for this browser, and the language you picked for
+          voice recognition. Only written once you open Experiments.
+        </li>
       </ul>
       <p>
         The service worker caches the app shell and pages you have visited. It
@@ -139,6 +148,53 @@ export default function Page() {
         end-to-end by DTLS and do not pass through any server. When it falls
         back to the relay, they pass through Supabase Realtime over TLS.
       </p>
+
+      <h2 id="voice">Voice tracking</h2>
+      <p>
+        This is the one feature that sends something you produce somewhere other
+        than your own devices, so it gets its own section, its own switch and
+        its own warning next to that switch.
+      </p>
+      <p>
+        With voice tracking on, the display asks the browser for speech
+        recognition. That is a browser API, not a service we run: there is no
+        key to obtain and nothing is added to a self-hosted deployment to make
+        it work. What happens to the audio is therefore the browser&rsquo;s
+        decision rather than ours.
+      </p>
+      <ul>
+        <li>
+          <strong>Chrome and Edge</strong> stream the audio to their
+          vendor&rsquo;s speech service and return text. That audio leaves your
+          machine, under their privacy policy, not this one.
+        </li>
+        <li>
+          <strong>Safari</strong> does more of the work on the device.
+        </li>
+        <li>
+          <strong>Firefox</strong> has no built-in recognition, so the feature
+          is unavailable there.
+        </li>
+      </ul>
+      <p>
+        On our side: no audio ever reaches a Teleprompt server, no transcript is
+        stored anywhere, and nothing about what you said is written to the
+        database. The words come back into the page, are matched against your
+        script in memory, and are discarded. The rolling readout under the
+        script holds the last hundred or so characters and is thrown away when
+        listening stops.
+      </p>
+      <p>
+        The room does record <em>that</em> a display is listening, because the
+        remote has to be able to see it and switch it off. That flag is
+        deliberately not restored when a room is reopened — a microphone should
+        never turn itself on because of a saved row.
+      </p>
+      <Note tone="coral" title="If this is not a trade you want">
+        Leave it off. It is off by default, it is per device rather than per
+        account, and every other part of Teleprompt works exactly as it does
+        without it.
+      </Note>
 
       <h2 id="delete">Deleting things</h2>
       <ul>

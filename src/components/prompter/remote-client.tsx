@@ -27,7 +27,13 @@ import { useRoomBootstrap } from "~/components/prompter/use-room-bootstrap";
 import { useRoomSession } from "~/components/prompter/use-room-session";
 import { ShortcutsOverlay } from "~/components/prompter/shortcuts-overlay";
 import { useScrub } from "~/components/prompter/use-scrub";
+import {
+  ExperimentsPanel,
+  VoiceButton,
+} from "~/components/prompter/voice-controls";
+import { useSpeechSupport } from "~/components/prompter/use-voice-tracking";
 import { Badge } from "~/components/ui/badge";
+import { useExperiments } from "~/lib/experiments";
 import { type PrompterState } from "~/lib/prompter/state";
 import { mirrorFontSize } from "~/lib/prompter/mirror";
 import { useShortcuts } from "~/lib/keyboard/use-shortcuts";
@@ -98,10 +104,15 @@ export function RemoteClient({ roomId }: { roomId: string }) {
 
 type Room = NonNullable<ReturnType<typeof useRoomBootstrap>["room"]>;
 
+/** How long the remote waits for a display to confirm before explaining. */
+const VOICE_CONFIRM_MS = 2500;
+
 function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const viewportWidth = useViewportWidth();
+  const [experiments, setExperiment] = useExperiments();
+  const speech = useSpeechSupport();
 
   /**
    * The remote deliberately does *not* render at the display's type size. It
@@ -132,6 +143,10 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
     role: "remote",
     onReload,
     deriveViewState,
+    // The remote never listens — it is not the device the reader is speaking
+    // in front of — but it does show which words have been said, which it can
+    // derive from the position it is already following.
+    words: experiments.voiceTracking,
   });
   const {
     state,
@@ -144,6 +159,46 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
   } = session;
 
   useWakeLock(true);
+
+  /**
+   * Mark the spoken words from the scroll position rather than a microphone.
+   *
+   * The remote only ever sees the driver's anchor, and that turns out to be
+   * enough: everything above the reading line has been read. It costs a binary
+   * search a frame and gives the person holding the phone the same picture as
+   * the person reading from the display.
+   */
+  useEffect(() => {
+    engine.setSpokenFollowsPosition(
+      experiments.voiceTracking && state.voiceTracking,
+    );
+  }, [engine, experiments.voiceTracking, state.voiceTracking]);
+
+  /**
+   * Whether the display took the request.
+   *
+   * The microphone belongs to the display, so this button is a request, and a
+   * display with the experiment switched off declines it. Without this the
+   * button would simply do nothing, which reads as a bug rather than as a
+   * setting on the other device.
+   */
+  const [voicePending, setVoicePending] = useState(false);
+  const [voiceRefused, setVoiceRefused] = useState(false);
+  useEffect(() => {
+    // Confirmed — including when the display was started from its own screen
+    // after this remote had given up waiting.
+    if (state.voiceTracking) {
+      setVoicePending(false);
+      setVoiceRefused(false);
+      return;
+    }
+    if (!voicePending) return;
+    const id = window.setTimeout(() => {
+      setVoicePending(false);
+      setVoiceRefused(true);
+    }, VOICE_CONFIRM_MS);
+    return () => window.clearTimeout(id);
+  }, [state.voiceTracking, voicePending]);
 
   useEffect(() => {
     document.body.dataset.surface = "stage";
@@ -181,6 +236,13 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
     [dispatch],
   );
 
+  const toggleVoice = useCallback(() => {
+    const next = !state.voiceTracking;
+    setVoiceRefused(false);
+    setVoicePending(next);
+    command({ k: "voice", on: next });
+  }, [command, state.voiceTracking]);
+
   /* --- Keyboard ----------------------------------------------------------- */
 
   /**
@@ -203,6 +265,9 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
         return command({ k: "scrub", delta: -0.8 });
       case "restart":
         return command({ k: "restart" });
+      case "voice":
+        if (!experiments.voiceTracking) return;
+        return toggleVoice();
       case "faster":
         return command({ k: "speed", delta: 10 });
       case "slower":
@@ -351,6 +416,7 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
           viewportRef={viewportRef}
           contentRef={contentRef}
           interactive
+          words={experiments.voiceTracking}
         />
 
         <div className="absolute top-3 right-3 z-10 flex flex-col gap-1.5">
@@ -397,17 +463,34 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
           speedWpm={state.speedWpm}
         />
 
-        <div className="mt-4">
+        <div className="mt-4 flex items-center justify-center gap-3">
           <TransportControls
             isPlaying={state.isPlaying}
             dispatch={command}
             size="lg"
           />
+          {experiments.voiceTracking ? (
+            <VoiceButton
+              on={state.voiceTracking}
+              busy={voicePending}
+              onToggle={toggleVoice}
+              size="lg"
+            />
+          ) : null}
         </div>
+
+        {voiceRefused ? (
+          <p className="mt-3 text-center text-[0.75rem] leading-snug text-coral">
+            The display did not start listening. Turn Voice tracking on in its
+            Experiments, on the screen itself.
+          </p>
+        ) : null}
 
         <div className="mt-4 flex items-center justify-between">
           <SpeedNudge speedWpm={state.speedWpm} dispatch={command} />
-          {state.isPlaying ? (
+          {state.voiceTracking ? (
+            <Badge tone="brand">Listening</Badge>
+          ) : state.isPlaying ? (
             <Badge tone="brand">Rolling</Badge>
           ) : (
             <Badge tone="stage">Held</Badge>
@@ -436,6 +519,7 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
         surface="remote"
         open={showHelp}
         onClose={() => setShowHelp(false)}
+        experimental={experiments.voiceTracking}
       />
 
       {/* Settings sheet --------------------------------------------------- */}
@@ -471,6 +555,16 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
               state={state}
               onChange={(patch) => dispatch({ k: "settings", patch })}
             />
+
+            <div className="mt-8 border-t border-stage-line pt-6">
+              <ExperimentsPanel
+                experiments={experiments}
+                onChange={setExperiment}
+                listens={false}
+                supported={speech.supported}
+                unsupportedReason={speech.reason}
+              />
+            </div>
           </div>
         </div>
       ) : null}
