@@ -258,6 +258,7 @@ function PrompterStage({
             latencyMs={session.latencyMs}
             peers={session.peers}
             polling={session.polling}
+            onReconnect={session.reconnect}
           />
           <span className="hidden font-mono text-[0.6875rem] tracking-[0.2em] text-stage-muted sm:inline">
             {room.code}

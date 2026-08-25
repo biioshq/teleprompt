@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowClockwise,
   Broadcast,
   Database,
   DeviceMobile,
@@ -38,6 +39,7 @@ export function ConnectionBadge({
   latencyMs,
   peers,
   polling = false,
+  onReconnect,
   className,
   tone = "stage",
 }: {
@@ -47,6 +49,8 @@ export function ConnectionBadge({
   peers: PresencePeer[];
   /** Position is coming from the database rather than from a peer. */
   polling?: boolean;
+  /** Offered once a join has actually failed, not while the first is in flight. */
+  onReconnect?: () => void;
   className?: string;
   tone?: "stage" | "paper";
 }) {
@@ -100,6 +104,23 @@ export function ConnectionBadge({
           <span className="ml-1.5 tabular opacity-70">{latencyMs}ms</span>
         ) : null}
       </span>
+
+      {onReconnect && status === "reconnecting" ? (
+        <button
+          type="button"
+          onClick={onReconnect}
+          title="Try to reconnect now"
+          className={cn(
+            "inline-flex items-center gap-1 rounded-xs border px-1.5 py-0.5 font-mono text-[0.625rem] tracking-[0.08em] uppercase transition-colors",
+            tone === "stage"
+              ? "border-stage-line text-stage-muted hover:border-brand hover:text-brand"
+              : "border-line text-muted hover:border-ink hover:text-ink",
+          )}
+        >
+          <ArrowClockwise size={11} weight="bold" />
+          Retry
+        </button>
+      ) : null}
 
       {peers.length > 0 ? (
         <span className="ml-1 flex items-center gap-1">

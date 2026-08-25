@@ -54,6 +54,17 @@ const STALE_AFTER_MS = 11_000;
 const DEAD_AFTER_MS = 16_000;
 const REJOIN_COOLDOWN_MS = 8000;
 const MAX_BACKOFF_MS = 20_000;
+/**
+ * `subscribe()` is not guaranteed to call back. If the underlying socket is
+ * wedged the join can simply hang, and without a deadline the session sits on
+ * "connecting" forever with nothing scheduled to rescue it.
+ */
+const JOIN_TIMEOUT_MS = 12_000;
+/**
+ * After this many failed joins the channel is not the problem. Drop the shared
+ * socket and let the client build a new one.
+ */
+const SOCKET_RESET_AFTER_ATTEMPTS = 3;
 
 export function useSyncLink({
   channelKey,
@@ -77,6 +88,8 @@ export function useSyncLink({
   const seenSetRef = useRef(new Set<string>());
   const lastInboundRef = useRef(0);
   const peersRef = useRef<PresencePeer[]>([]);
+  /** Set while a channel effect is live, so the UI can force a rejoin. */
+  const reconnectRef = useRef<(() => void) | null>(null);
 
   // Kept in refs so the effect below never has to re-subscribe when a parent
   // re-renders with a new closure. Re-subscribing mid-take would be visible.
@@ -244,6 +257,16 @@ export function useSyncLink({
       mesh?.syncPeers(next.map((peer) => peer.deviceKey));
     };
 
+    let connecting = false;
+    let joinTimer: number | null = null;
+
+    const clearJoinTimer = () => {
+      if (joinTimer !== null) {
+        window.clearTimeout(joinTimer);
+        joinTimer = null;
+      }
+    };
+
     const scheduleReconnect = () => {
       if (cancelled || retryTimer !== null) return;
       // Back off, but never past the point where a session feels abandoned.
@@ -252,79 +275,132 @@ export function useSyncLink({
       retryTimer = window.setTimeout(
         () => {
           retryTimer = null;
-          connect();
+          void connect();
         },
         delay + Math.random() * 400,
       );
     };
 
-    const connect = () => {
-      if (cancelled) return;
-      lastRejoinAt = Date.now();
+    const connect = async () => {
+      if (cancelled || connecting) return;
+      connecting = true;
 
-      const previous = channelRef.current;
-      channelRef.current = null;
-      if (previous) void supabase.removeChannel(previous);
+      try {
+        // A scheduled retry would otherwise fire on top of this one and leave
+        // two channels racing for the same topic.
+        if (retryTimer !== null) {
+          window.clearTimeout(retryTimer);
+          retryTimer = null;
+        }
+        clearJoinTimer();
+        lastRejoinAt = Date.now();
 
-      setStatus(attempt === 0 ? "connecting" : "reconnecting");
+        const previous = channelRef.current;
+        channelRef.current = null;
+        if (previous) {
+          // Awaited deliberately. Supabase keys channels by topic, so joining
+          // again before the leave has completed lets the server process them
+          // out of order and drop the new channel - which looks exactly like a
+          // reconnect that never finishes.
+          try {
+            await supabase.removeChannel(previous);
+          } catch {
+            // Already gone, which is the state we wanted anyway.
+          }
+        }
+        if (cancelled) return;
 
-      const channel = supabase.channel(channelNameFor(channelKey), {
-        config: {
-          broadcast: { self: false, ack: false },
-          presence: { key: deviceKey },
-        },
-      });
-      channelRef.current = channel;
+        if (attempt >= SOCKET_RESET_AFTER_ATTEMPTS) {
+          // Several joins have failed in a row; suspect the socket rather than
+          // the channel and force the client to build a fresh one.
+          try {
+            supabase.realtime.disconnect();
+            supabase.realtime.connect();
+          } catch {
+            // Not fatal: the join below will fail and schedule another retry.
+          }
+        }
 
-      channel
-        .on("broadcast", { event: "m" }, ({ payload }) =>
-          handleIncoming(payload),
-        )
-        .on("presence", { event: "sync" }, () => syncPresence(channel))
-        .on("presence", { event: "join" }, () => syncPresence(channel))
-        .on("presence", { event: "leave" }, () => syncPresence(channel))
-        .subscribe((subscribeStatus) => {
-          if (cancelled) return;
+        setStatus(attempt === 0 ? "connecting" : "reconnecting");
 
-          if (subscribeStatus === "SUBSCRIBED") {
-            attempt = 0;
-            lastInboundRef.current = Date.now();
-            setStale(false);
-            setStatus("online");
+        const channel = supabase.channel(channelNameFor(channelKey), {
+          config: {
+            broadcast: { self: false, ack: false },
+            presence: { key: deviceKey },
+          },
+        });
+        channelRef.current = channel;
 
-            // Re-tracked on every successful (re)join, not just the first.
-            void channel.track({
-              label: identityRef.current.label,
-              role: identityRef.current.role,
-              platform: identityRef.current.platform,
-              onlineAt: Date.now(),
-            });
-            rawSend({
-              t: "hello",
-              from: deviceKey,
-              seq: seqRef.current++,
-              device: {
-                deviceKey,
+        joinTimer = window.setTimeout(() => {
+          joinTimer = null;
+          if (cancelled || channelRef.current !== channel) return;
+          setStatus("reconnecting");
+          scheduleReconnect();
+        }, JOIN_TIMEOUT_MS);
+
+        channel
+          .on("broadcast", { event: "m" }, ({ payload }) =>
+            handleIncoming(payload),
+          )
+          .on("presence", { event: "sync" }, () => syncPresence(channel))
+          .on("presence", { event: "join" }, () => syncPresence(channel))
+          .on("presence", { event: "leave" }, () => syncPresence(channel))
+          .subscribe((subscribeStatus) => {
+            if (cancelled) return;
+            // A channel we have already replaced still emits CLOSED as it goes
+            // away. Acting on that knocked the healthy replacement back into
+            // "reconnecting" and queued another pointless rejoin.
+            if (channelRef.current !== channel) return;
+
+            if (subscribeStatus === "SUBSCRIBED") {
+              clearJoinTimer();
+              attempt = 0;
+              lastInboundRef.current = Date.now();
+              setStale(false);
+              setStatus("online");
+
+              // Re-tracked on every successful (re)join, not just the first.
+              void channel.track({
                 label: identityRef.current.label,
                 role: identityRef.current.role,
                 platform: identityRef.current.platform,
-              },
-            });
-            return;
-          }
+                onlineAt: Date.now(),
+              });
+              rawSend({
+                t: "hello",
+                from: deviceKey,
+                seq: seqRef.current++,
+                device: {
+                  deviceKey,
+                  label: identityRef.current.label,
+                  role: identityRef.current.role,
+                  platform: identityRef.current.platform,
+                },
+              });
+              return;
+            }
 
-          if (
-            subscribeStatus === "CHANNEL_ERROR" ||
-            subscribeStatus === "TIMED_OUT" ||
-            subscribeStatus === "CLOSED"
-          ) {
-            setStatus("reconnecting");
-            scheduleReconnect();
-          }
-        });
+            if (
+              subscribeStatus === "CHANNEL_ERROR" ||
+              subscribeStatus === "TIMED_OUT" ||
+              subscribeStatus === "CLOSED"
+            ) {
+              clearJoinTimer();
+              setStatus("reconnecting");
+              scheduleReconnect();
+            }
+          });
+      } finally {
+        connecting = false;
+      }
     };
 
-    connect();
+    reconnectRef.current = () => {
+      attempt = 0;
+      void connect();
+    };
+
+    void connect();
 
     const ping = window.setInterval(() => {
       if (cancelled) return;
@@ -361,14 +437,14 @@ export function useSyncLink({
         idleFor > DEAD_AFTER_MS &&
         Date.now() - lastRejoinAt > REJOIN_COOLDOWN_MS
       ) {
-        connect();
+        void connect();
       }
     }, WATCHDOG_INTERVAL_MS);
 
     const onOnline = () => {
       if (cancelled) return;
       attempt = 0;
-      connect();
+      void connect();
     };
     const onVisible = () => {
       if (cancelled || document.visibilityState !== "visible") return;
@@ -379,7 +455,7 @@ export function useSyncLink({
       // Coming back from the background is the moment a stale socket shows up.
       if (Date.now() - lastInboundRef.current > STALE_AFTER_MS) {
         attempt = 0;
-        connect();
+        void connect();
       }
     };
 
@@ -388,9 +464,11 @@ export function useSyncLink({
 
     return () => {
       cancelled = true;
+      reconnectRef.current = null;
       window.clearInterval(ping);
       window.clearInterval(watchdog);
       if (retryTimer !== null) window.clearTimeout(retryTimer);
+      clearJoinTimer();
       window.removeEventListener("online", onOnline);
       document.removeEventListener("visibilitychange", onVisible);
 
@@ -451,6 +529,11 @@ export function useSyncLink({
   /** True when the realtime path cannot be trusted to carry the session. */
   const degraded = status !== "online" || stale;
 
+  /** Force a rejoin now, for a person who has waited long enough. */
+  const reconnect = useCallback(() => {
+    reconnectRef.current?.();
+  }, []);
+
   return {
     status,
     peers: peersWithTransport,
@@ -459,5 +542,6 @@ export function useSyncLink({
     stale,
     degraded,
     send,
+    reconnect,
   };
 }

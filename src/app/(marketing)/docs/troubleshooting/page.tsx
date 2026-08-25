@@ -158,6 +158,19 @@ export default function Page() {
 
       <h2 id="stuck">A device is stuck connecting</h2>
       <p>
+        Press <strong>Retry</strong> next to the connection badge. It appears
+        once a join has actually failed, and forces a fresh one immediately
+        rather than waiting out the backoff.
+      </p>
+      <p>
+        Behind that, three things happen on their own: a join that never answers
+        is abandoned after twelve seconds and retried; repeated failures drop
+        the shared socket entirely and build a new one, on the assumption that
+        the channel is not the problem; and the session keeps working off the
+        saved position in the meantime, which is what the badge means by{" "}
+        <em>Catching up</em>.
+      </p>
+      <p>
         The badge shows <em>Connecting</em> or <em>Reconnecting</em> for more
         than a few seconds:
       </p>

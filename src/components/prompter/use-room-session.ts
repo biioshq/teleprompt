@@ -399,6 +399,7 @@ export function useRoomSession({
     transport: link.transport,
     latencyMs: link.latencyMs,
     degraded: link.degraded,
+    reconnect: link.reconnect,
     /** True when position is coming from the database rather than a peer. */
     polling: usingPolledState,
     announceReload: (contentRevision: number) =>
