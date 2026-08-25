@@ -36,9 +36,17 @@ export default function Page() {
         updates to match.
       </p>
       <p>
-        The one exception is the remote&rsquo;s own mirror size, set with the
-        two buttons in the corner of the mirror. That is local, because a phone
-        is not a monitor and should not have to pretend to be one.
+        That includes type size. The two buttons in the corner of the
+        remote&rsquo;s mirror, the <kbd>+</kbd> and <kbd>&minus;</kbd> keys and
+        the Type size slider all change the same shared value, so resizing from
+        either device moves both.
+      </p>
+      <p>
+        The remote does not render at the display&rsquo;s pixel size, though: a
+        phone is not a monitor and should not pretend to be one. It scales the
+        shared size down to something readable in the hand, which is possible
+        because the two devices agree on a position in the text rather than a
+        position in pixels.
       </p>
 
       <h2 id="type">Type size and line height</h2>

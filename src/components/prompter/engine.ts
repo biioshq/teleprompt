@@ -157,6 +157,10 @@ export class PrompterEngine {
     for (const node of nodes) {
       next.push({ top: node.offsetTop, height: node.offsetHeight || 1 });
     }
+    // Drop the previous highlight explicitly. React reuses DOM nodes across
+    // re-renders, so simply forgetting the index leaves the attribute behind
+    // and the next render lights a second line.
+    for (const node of nodes) node.removeAttribute("data-tp-active");
     this.blocks = next;
     this.nodes = nodes;
     this.activeIndex = -1;

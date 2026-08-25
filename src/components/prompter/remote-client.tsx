@@ -35,7 +35,29 @@ import { useWakeLock } from "~/lib/pwa";
 /** Distance a finger may travel before a tap becomes a scrub. */
 const TAP_SLOP_PX = 8;
 
-const MIRROR_SIZES = [16, 19, 23, 28] as const;
+/**
+ * The mirror's type size is derived from the room's shared size rather than
+ * set independently.
+ *
+ * A phone is not a monitor, so it cannot simply use the display's pixel value.
+ * But having a separate local size meant the two buttons over the mirror and
+ * the identical-looking keyboard shortcut did different things: one resized
+ * this device, the other resized the other one. Scaling the shared value keeps
+ * the phone readable and makes every size control in the app mean the same
+ * thing.
+ */
+const MIRROR_SCALE = 0.34;
+const MIRROR_MIN = 15;
+const MIRROR_MAX = 34;
+const FONT_STEP = 4;
+
+function mirrorFontSize(sharedFontSize: number) {
+  return clamp(
+    Math.round(sharedFontSize * MIRROR_SCALE),
+    MIRROR_MIN,
+    MIRROR_MAX,
+  );
+}
 
 function buzz(ms = 8) {
   if (typeof navigator === "undefined") return;
@@ -80,7 +102,6 @@ export function RemoteClient({ roomId }: { roomId: string }) {
 type Room = NonNullable<ReturnType<typeof useRoomBootstrap>["room"]>;
 
 function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
-  const [mirrorIndex, setMirrorIndex] = useState(1);
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
 
@@ -89,11 +110,14 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
    * shows the same words, laid out for a phone in the hand. This is only
    * possible because devices agree on a text anchor rather than a scroll
    * offset — see `lib/prompter/state.ts`.
+   *
+   * The size still tracks the room's setting, scaled: resize from either
+   * device and both move together.
    */
   const deriveViewState = useCallback(
     (state: PrompterState): PrompterState => ({
       ...state,
-      fontSize: MIRROR_SIZES[mirrorIndex] ?? 19,
+      fontSize: mirrorFontSize(state.fontSize),
       lineHeight: 1.45,
       contentWidth: 100,
       readingLine: 0.32,
@@ -102,7 +126,7 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
       showReadingLine: true,
       theme: "night",
     }),
-    [mirrorIndex],
+    [],
   );
 
   const session = useRoomSession({
@@ -130,14 +154,26 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
     };
   }, []);
 
-  // Ask the display for the truth as soon as the remote is on the channel.
-  const asked = useRef(false);
+  /**
+   * Ask the display for the truth whenever one turns up.
+   *
+   * This used to latch after the first peer of any kind, so a remote that
+   * opened before the display - the normal order - asked while nobody was
+   * listening and then never asked again.
+   */
+  const displayCount = session.peers.filter(
+    (peer) => peer.role === "prompter",
+  ).length;
+  const hadDisplay = useRef(false);
   useEffect(() => {
-    if (asked.current) return;
-    if (session.peers.length === 0) return;
-    asked.current = true;
+    if (displayCount === 0) {
+      hadDisplay.current = false;
+      return;
+    }
+    if (hadDisplay.current) return;
+    hadDisplay.current = true;
     dispatch({ k: "requestState" });
-  }, [dispatch, session.peers.length]);
+  }, [dispatch, displayCount]);
 
   const command = useCallback(
     (...args: Parameters<typeof dispatch>) => {
@@ -323,24 +359,28 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
           <button
             type="button"
             onClick={() =>
-              setMirrorIndex((index) =>
-                clamp(index + 1, 0, MIRROR_SIZES.length - 1),
-              )
+              command({
+                k: "settings",
+                patch: { fontSize: state.fontSize + FONT_STEP },
+              })
             }
-            aria-label="Larger text on the remote"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-stage-line bg-stage/80 text-stage-muted backdrop-blur transition-colors hover:text-stage-ink"
+            aria-label="Larger text on both screens"
+            title="Larger text on both screens"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-sm border border-stage-line bg-stage/80 text-stage-muted backdrop-blur transition-colors hover:text-stage-ink active:scale-95"
           >
             <ArrowsOutLineVertical size={15} weight="bold" />
           </button>
           <button
             type="button"
             onClick={() =>
-              setMirrorIndex((index) =>
-                clamp(index - 1, 0, MIRROR_SIZES.length - 1),
-              )
+              command({
+                k: "settings",
+                patch: { fontSize: state.fontSize - FONT_STEP },
+              })
             }
-            aria-label="Smaller text on the remote"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-stage-line bg-stage/80 text-stage-muted backdrop-blur transition-colors hover:text-stage-ink"
+            aria-label="Smaller text on both screens"
+            title="Smaller text on both screens"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-sm border border-stage-line bg-stage/80 text-stage-muted backdrop-blur transition-colors hover:text-stage-ink active:scale-95"
           >
             <ArrowsInLineVertical size={15} weight="bold" />
           </button>
@@ -407,7 +447,7 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
           onClick={() => setShowSettings(false)}
         >
           <div
-            className="max-h-[85dvh] w-full overflow-y-auto rounded-t-xl border-t border-stage-line bg-stage-raised px-5 pt-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+            className="max-h-[85dvh] w-full overflow-y-auto overscroll-contain rounded-t-xl border-t border-stage-line bg-stage-raised px-5 pt-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="mb-5 flex items-center justify-between">

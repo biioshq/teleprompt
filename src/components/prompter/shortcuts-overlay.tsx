@@ -32,7 +32,7 @@ export function ShortcutsOverlay({
       aria-label="Keyboard shortcuts"
     >
       <div
-        className="max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-lg border border-stage-line bg-stage-raised p-6"
+        className="max-h-[85dvh] w-full max-w-lg overflow-y-auto overscroll-contain rounded-lg border border-stage-line bg-stage-raised p-6"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-6 flex items-start justify-between gap-4">

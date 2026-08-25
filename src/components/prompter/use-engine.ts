@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 
 import { scriptWordCount } from "~/lib/markdown/blocks";
-import { type PrompterState } from "~/lib/prompter/state";
+import { type Anchor, type PrompterState } from "~/lib/prompter/state";
 import { PrompterEngine, type EngineMode } from "~/components/prompter/engine";
 
 /**
@@ -19,11 +19,19 @@ export function useEngine({
   state,
   mode,
   highlight = false,
+  initialAnchor,
 }: {
   content: string;
   state: PrompterState;
   mode: EngineMode;
   highlight?: boolean;
+  /**
+   * Where the room was when it was last written to the database. Applied once,
+   * after the first measure. Without this the position was persisted every few
+   * seconds and then never read back, so every session opened at the top of
+   * the script no matter where it had been left.
+   */
+  initialAnchor?: Anchor;
 }) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
@@ -34,6 +42,10 @@ export function useEngine({
   // Set before the first measure so the very first frame is already paced.
   const totalWordsRef = useRef(0);
   totalWordsRef.current = scriptWordCount(content);
+
+  // Captured once: restoring is a mount-time action, not something that should
+  // yank the reader every time the prop identity changes.
+  const initialAnchorRef = useRef(initialAnchor);
 
   useLayoutEffect(() => {
     const viewport = viewportRef.current;
@@ -46,6 +58,13 @@ export function useEngine({
       totalWords: totalWordsRef.current,
     });
     engine.attach(viewport, contentEl);
+
+    const anchor = initialAnchorRef.current;
+    if (anchor && (anchor.blockIndex > 0 || anchor.blockFraction > 0)) {
+      // Safe before web fonts settle: a later re-measure preserves the anchor
+      // rather than the pixel offset.
+      engine.seek(anchor);
+    }
 
     return () => engine.destroy();
     // Attach once. Everything else is pushed in through the effects below.

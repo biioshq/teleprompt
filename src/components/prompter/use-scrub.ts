@@ -35,14 +35,28 @@ export function useScrub({
 
   const flush = useCallback(() => {
     timer.current = null;
-    const pixels = pending.current;
+    if (pending.current === 0) return;
     pending.current = 0;
-    if (pixels === 0) return;
-    const height = viewportRef.current?.clientHeight ?? 1;
-    dispatch({ k: "scrub", delta: pixels / height });
-  }, [dispatch, viewportRef]);
 
-  /** Call once when a gesture starts, so a follower can move under the finger. */
+    /**
+     * Send where we ended up, not how far the finger travelled.
+     *
+     * `scrub` is a delta measured in viewport heights, so the same gesture
+     * moved the display by a fraction of *its* window rather than the same
+     * words - a different number of lines, and a different answer again if the
+     * display was resized or full-screened. Because the gesture already
+     * applied locally, this device knows the exact anchor it landed on, and an
+     * anchor means the same thing on every screen. Every other position in the
+     * app travels this way; this was the one path leaking pixels across.
+     */
+    dispatch({ k: "seek", anchor: engine.getAnchor() });
+  }, [dispatch, engine]);
+
+  /**
+   * Call once when a gesture starts. A follower takes local authority for the
+   * duration, both so the text tracks the finger and so the anchor it reports
+   * back is its own considered position rather than a guess.
+   */
   const beginGesture = useCallback(() => {
     if (driving) return;
     optimistic.current = true;
@@ -70,7 +84,9 @@ export function useScrub({
         return;
       }
 
-      if (optimistic.current) engine.nudgePixels(pixels);
+      // The local nudge is what makes the resulting anchor meaningful, so it
+      // has to happen before the flush reads it.
+      engine.nudgePixels(pixels);
       pending.current += pixels;
       timer.current ??= window.setTimeout(flush, FLUSH_INTERVAL_MS);
     },

@@ -134,7 +134,23 @@
   body[data-surface="stage"] {
     background-color: var(--color-stage);
     color: var(--color-stage-ink);
+    /* No rubber-banding or pull-to-refresh behind a surface whose whole job is
+       to be dragged. */
     overscroll-behavior: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Removes the 300ms wait a browser spends deciding whether a tap was the
+     first half of a double-tap zoom. */
+  button,
+  [role="button"],
+  a,
+  label,
+  summary,
+  input,
+  select {
+    touch-action: manipulation;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -384,6 +400,9 @@
     height: 28px;
     background: transparent;
     cursor: pointer;
+    /* Without this the settings sheet scrolls out from under the finger the
+       moment a drag starts, and the slider never moves. */
+    touch-action: none;
   }
   input[type="range"].tp-range::-webkit-slider-runnable-track {
     height: 4px;
@@ -442,6 +461,29 @@
       #000 82%,
       transparent 100%
     );
+  }
+
+  /* Coarse pointers get a bigger thumb and a thicker track: 20px is fine
+     under a mouse and fiddly under a fingertip. */
+  @media (pointer: coarse) {
+    input[type="range"].tp-range {
+      height: 40px;
+    }
+    input[type="range"].tp-range::-webkit-slider-runnable-track {
+      height: 6px;
+    }
+    input[type="range"].tp-range::-webkit-slider-thumb {
+      width: 28px;
+      height: 28px;
+      margin-top: -11px;
+    }
+    input[type="range"].tp-range::-moz-range-track {
+      height: 6px;
+    }
+    input[type="range"].tp-range::-moz-range-thumb {
+      width: 28px;
+      height: 28px;
+    }
   }
 
   .no-scrollbar {

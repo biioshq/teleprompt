@@ -118,6 +118,54 @@ export const prompterSettingsSchema = prompterStateSchema
 
 export type PrompterSettings = z.infer<typeof prompterSettingsSchema>;
 
+/**
+ * Bring a settings patch inside the allowed range before it goes anywhere.
+ *
+ * This matters more than it looks. `prompterSettingsSchema` rejects an
+ * out-of-range value, `parseMessage` returns null for the whole envelope, and
+ * the receiver drops it silently - so a font-size step taken at the maximum
+ * did not clamp, it vanished. The display's own keystroke clamped on arrival
+ * and the remote's did not, which is exactly the kind of difference that gets
+ * reported as "it works on one device but not the other".
+ */
+export function clampSettings(patch: PrompterSettings): PrompterSettings {
+  const out: PrompterSettings = { ...patch };
+  if (out.speedWpm !== undefined) {
+    out.speedWpm = clamp(
+      Math.round(out.speedWpm),
+      LIMITS.speedWpm.min,
+      LIMITS.speedWpm.max,
+    );
+  }
+  if (out.fontSize !== undefined) {
+    out.fontSize = clamp(
+      Math.round(out.fontSize),
+      LIMITS.fontSize.min,
+      LIMITS.fontSize.max,
+    );
+  }
+  if (out.lineHeight !== undefined) {
+    out.lineHeight = roundTo(
+      clamp(out.lineHeight, LIMITS.lineHeight.min, LIMITS.lineHeight.max),
+      2,
+    );
+  }
+  if (out.contentWidth !== undefined) {
+    out.contentWidth = clamp(
+      Math.round(out.contentWidth),
+      LIMITS.contentWidth.min,
+      LIMITS.contentWidth.max,
+    );
+  }
+  if (out.readingLine !== undefined) {
+    out.readingLine = roundTo(
+      clamp(out.readingLine, LIMITS.readingLine.min, LIMITS.readingLine.max),
+      3,
+    );
+  }
+  return out;
+}
+
 export const DEFAULT_PROMPTER_STATE: PrompterState = {
   anchor: { blockIndex: 0, blockFraction: 0 },
   isPlaying: false,

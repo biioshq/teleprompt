@@ -8,7 +8,9 @@ import {
   DEFAULT_PROMPTER_STATE,
   LIMITS,
   clamp,
+  clampSettings,
   normaliseState,
+  type PrompterSettings,
   type PrompterState,
 } from "~/lib/prompter/state";
 import { useSyncLink, type OutgoingMessage } from "~/lib/realtime/link";
@@ -24,6 +26,15 @@ type RoomLike = {
   contentRevision: number;
   state: PrompterState;
 };
+
+/** The driver restates the full room even when nothing is moving. */
+const STATE_HEARTBEAT_MS = 2000;
+/** How long a locally changed field is protected from the driver's echo. */
+const PREVIEW_GRACE_MS = 700;
+/** Two devices' clocks disagree; inside this window, do not trust the order. */
+const CLOCK_SKEW_TOLERANCE_MS = 3000;
+/** Slider drags fire per pixel; the wire only needs about ten a second. */
+const SETTINGS_COALESCE_MS = 100;
 
 /** Everything except the live position and its bookkeeping. */
 function sameSettings(a: PrompterState, b: PrompterState) {
@@ -68,6 +79,32 @@ export function useRoomSession({
   stateRef.current = state;
 
   /**
+   * Fields this device has just changed locally, and the moment that grace
+   * period ends.
+   *
+   * The driver rebroadcasts the full state about ten times a second. Without
+   * this, a value the user is actively dragging is overwritten by every
+   * in-flight snapshot carrying the pre-change value, so the control visibly
+   * oscillates between the finger and the old setting until the round trip
+   * lands. Only the fields being previewed are held back; everything else in
+   * the snapshot is applied as normal, and after the window the driver wins.
+   */
+  const preview = useRef<{ fields: Set<string>; until: number }>({
+    fields: new Set(),
+    until: 0,
+  });
+
+  /** Let an inbound snapshot through, minus anything being previewed here. */
+  const reconcile = useCallback((incoming: PrompterState): PrompterState => {
+    const { fields, until } = preview.current;
+    if (Date.now() > until || fields.size === 0) return incoming;
+    const merged = { ...incoming } as Record<string, unknown>;
+    const local = stateRef.current as unknown as Record<string, unknown>;
+    for (const field of fields) merged[field] = local[field];
+    return merged as unknown as PrompterState;
+  }, []);
+
+  /**
    * A room can hold more than one display. Exactly one device drives: the
    * prompter that has been connected longest, chosen by a rule both sides can
    * evaluate independently so there is never a negotiation round trip.
@@ -87,6 +124,7 @@ export function useRoomSession({
     state: viewState,
     mode: driving ? "drive" : "follow",
     highlight: true,
+    initialAnchor: room.state.anchor,
   });
 
   const sendRef = useRef<(message: OutgoingMessage) => void>(() => undefined);
@@ -200,9 +238,10 @@ export function useRoomSession({
           });
           // Position arrives ten times a second and never goes through React.
           // Only a real settings change is worth a render.
-          if (!sameSettings(incoming, stateRef.current)) {
-            stateRef.current = incoming;
-            setState(incoming);
+          const settled = reconcile(incoming);
+          if (!sameSettings(settled, stateRef.current)) {
+            stateRef.current = settled;
+            setState(settled);
           }
           return;
         }
@@ -217,7 +256,7 @@ export function useRoomSession({
           return;
       }
     },
-    [applyCommand, broadcastState, engine, room.contentRevision],
+    [applyCommand, broadcastState, engine, reconcile, room.contentRevision],
   );
 
   const link = useSyncLink({
@@ -240,11 +279,18 @@ export function useRoomSession({
     const otherPrompters = link.peers.filter(
       (peer) => peer.role === "prompter",
     );
-    const wins = otherPrompters.every((peer) =>
-      joinedAtRef.current === peer.onlineAt
-        ? device.deviceKey < peer.deviceKey
-        : joinedAtRef.current < peer.onlineAt,
-    );
+    const wins = otherPrompters.every((peer) => {
+      // These two numbers come from two different machines' clocks, which are
+      // not the same clock. A few seconds of skew was enough for both displays
+      // to conclude they had joined first and drive at once. Anything inside
+      // the tolerance is treated as a tie and settled on device key, which
+      // both sides evaluate identically.
+      const delta = joinedAtRef.current - peer.onlineAt;
+      if (Math.abs(delta) < CLOCK_SKEW_TOLERANCE_MS) {
+        return device.deviceKey < peer.deviceKey;
+      }
+      return delta < 0;
+    });
     setDriving(wins);
   }, [device.deviceKey, link.peers, role]);
 
@@ -260,6 +306,27 @@ export function useRoomSession({
       });
     });
   }, [driving, engine]);
+
+  /**
+   * A heartbeat, so a lost command cannot leave a device lying.
+   *
+   * Commands are fire-and-forget, and the only thing that used to correct a
+   * follower was the driver's anchor broadcast - which a paused display never
+   * sends, because the anchor has not moved. So a settings change dropped in
+   * flight, or made before any display had connected, left the remote showing
+   * a value the display had never taken, with nothing to ever put it right.
+   * That is a bad way to find out you are not at the type size you set.
+   *
+   * Two seconds is far below the rate the anchor path already broadcasts at
+   * while rolling, so this costs nothing when it is not needed.
+   */
+  useEffect(() => {
+    if (!driving) return;
+    const id = window.setInterval(() => {
+      broadcastState(stateRef.current);
+    }, STATE_HEARTBEAT_MS);
+    return () => window.clearInterval(id);
+  }, [broadcastState, driving]);
 
   useEffect(() => {
     if (!driving) return;
@@ -348,11 +415,18 @@ export function useRoomSession({
       isPlaying: data.state.isPlaying,
       speedWpm: data.state.speedWpm,
     });
-    if (!sameSettings(data.state, stateRef.current)) {
-      stateRef.current = data.state;
-      setState(data.state);
+    const settled = reconcile(data.state);
+    if (!sameSettings(settled, stateRef.current)) {
+      stateRef.current = settled;
+      setState(settled);
     }
-  }, [roomState.data, usingPolledState, engine, room.contentRevision]);
+  }, [
+    roomState.data,
+    usingPolledState,
+    engine,
+    reconcile,
+    room.contentRevision,
+  ]);
 
   /* --- Presence bookkeeping ---------------------------------------------- */
 
@@ -370,12 +444,120 @@ export function useRoomSession({
 
   /* --- Public surface ---------------------------------------------------- */
 
+  /**
+   * Show a settings change on this device straight away.
+   *
+   * The sliders and steppers are controlled inputs bound to shared state, and
+   * on a follower `dispatch` only put a command on the wire. Until the driver
+   * echoed the change back, the control still displayed the old value - so
+   * dragging a slider meant the thumb fighting the finger, and on a slow link
+   * it read as the control being broken.
+   *
+   * Applying it locally first is safe because both ends clamp through the same
+   * `normaliseState`, so the driver's broadcast confirms this value rather
+   * than correcting it. The revision is deliberately not bumped: this is a
+   * preview, and the driver remains the authority.
+   */
+  const previewSettings = useCallback((patch: PrompterSettings) => {
+    const clamped = clampSettings(patch);
+    const next = normaliseState({ ...stateRef.current, ...clamped });
+    stateRef.current = next;
+    setState(next);
+
+    const now = Date.now();
+    if (preview.current.until < now) preview.current.fields = new Set();
+    for (const field of Object.keys(clamped)) preview.current.fields.add(field);
+    preview.current.until = now + PREVIEW_GRACE_MS;
+  }, []);
+
+  /**
+   * Settings commands are coalesced before they go on the wire.
+   *
+   * A range input fires on every pixel of a drag. Each of those was becoming a
+   * command, a commit on the driver and a full state broadcast back - dozens a
+   * second, comfortably past the relay's rate limit, which is a good way to
+   * make a change look like it did not sync at all. The local preview still
+   * updates on every event, so the control stays smooth.
+   */
+  const pendingPatch = useRef<PrompterSettings | null>(null);
+  const settingsTimer = useRef<number | null>(null);
+
+  const flushSettings = useCallback(() => {
+    settingsTimer.current = null;
+    const patch = pendingPatch.current;
+    pendingPatch.current = null;
+    if (patch) sendRef.current({ t: "cmd", cmd: { k: "settings", patch } });
+  }, []);
+
+  const queueSettings = useCallback(
+    (patch: PrompterSettings) => {
+      pendingPatch.current = { ...pendingPatch.current, ...patch };
+      settingsTimer.current ??= window.setTimeout(
+        flushSettings,
+        SETTINGS_COALESCE_MS,
+      );
+    },
+    [flushSettings],
+  );
+
+  useEffect(
+    () => () => {
+      if (settingsTimer.current !== null) {
+        window.clearTimeout(settingsTimer.current);
+        flushSettings();
+      }
+    },
+    [flushSettings],
+  );
+
   const dispatch = useCallback(
     (command: Command) => {
-      if (drivingRef.current) applyCommand(command);
-      else sendRef.current({ t: "cmd", cmd: command });
+      if (drivingRef.current) {
+        applyCommand(command);
+        return;
+      }
+      if (command.k === "settings") {
+        const clamped = clampSettings(command.patch);
+        previewSettings(clamped);
+        queueSettings(clamped);
+        return;
+      }
+
+      if (command.k === "speed") {
+        previewSettings({
+          speedWpm: clamp(
+            stateRef.current.speedWpm + command.delta,
+            LIMITS.speedWpm.min,
+            LIMITS.speedWpm.max,
+          ),
+        });
+      } else if (
+        command.k === "toggle" ||
+        command.k === "play" ||
+        command.k === "pause"
+      ) {
+        // Transport needs local feedback too. Without it the button showed the
+        // old state until the driver echoed, and a second impatient tap
+        // cancelled the first.
+        const next =
+          command.k === "toggle"
+            ? !stateRef.current.isPlaying
+            : command.k === "play";
+        const updated = normaliseState({
+          ...stateRef.current,
+          isPlaying: next,
+        });
+        stateRef.current = updated;
+        setState(updated);
+        const now = Date.now();
+        if (preview.current.until < now) preview.current.fields = new Set();
+        preview.current.fields.add("isPlaying");
+        preview.current.until = now + PREVIEW_GRACE_MS;
+      }
+
+      sendRef.current({ t: "cmd", cmd: command });
     },
-    [applyCommand],
+    [applyCommand, previewSettings, queueSettings],
   );
 
   const totalWords = useMemo(

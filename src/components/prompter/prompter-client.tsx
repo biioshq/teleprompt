@@ -34,6 +34,8 @@ import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
 const CHROME_IDLE_MS = 2600;
+/** Distance a finger may travel before a tap becomes a scrub. */
+const TAP_SLOP_PX = 8;
 
 export function PrompterClient({ roomId }: { roomId: string }) {
   const { room, isLoading, error, refetch, slow } = useRoomBootstrap(
@@ -182,7 +184,12 @@ function PrompterStage({
 
   /* --- Wheel and drag scrubbing ------------------------------------------ */
 
-  const dragState = useRef<{ pointerId: number; lastY: number } | null>(null);
+  const dragState = useRef<{
+    pointerId: number;
+    startY: number;
+    lastY: number;
+    moved: boolean;
+  } | null>(null);
   const { scrubPixels, beginGesture, endGesture } = useScrub({
     engine,
     driving,
@@ -206,7 +213,11 @@ function PrompterStage({
 
   return (
     <div
-      className="relative h-[100dvh] w-full overflow-hidden bg-stage"
+      // `touch-none` is load-bearing on a tablet: without it the browser
+      // claims a vertical drag as a page scroll or a pull-to-refresh and
+      // cancels the pointer stream mid-scrub. `select-none` stops a long press
+      // selecting the script and raising the copy callout.
+      className="relative h-[100dvh] w-full touch-none overflow-hidden bg-stage select-none"
       onPointerDown={(event) => {
         wake();
         if (event.pointerType === "mouse" && event.button !== 0) return;
@@ -215,7 +226,9 @@ function PrompterStage({
           return;
         dragState.current = {
           pointerId: event.pointerId,
+          startY: event.clientY,
           lastY: event.clientY,
+          moved: false,
         };
         beginGesture();
       }}
@@ -225,11 +238,22 @@ function PrompterStage({
         if (!drag || drag.pointerId !== event.pointerId) return;
         const delta = drag.lastY - event.clientY;
         drag.lastY = event.clientY;
-        if (delta !== 0) scrubPixels(delta);
+        if (Math.abs(event.clientY - drag.startY) > TAP_SLOP_PX) {
+          drag.moved = true;
+        }
+        if (drag.moved && delta !== 0) scrubPixels(delta);
       }}
-      onPointerUp={() => {
-        if (dragState.current) endGesture();
+      onPointerUp={(event) => {
+        const drag = dragState.current;
         dragState.current = null;
+        if (!drag) return;
+        endGesture();
+        // With no cursor there is nothing to "move" to bring the controls
+        // back, and every touch would otherwise scrub. A tap that goes
+        // nowhere toggles the chrome instead.
+        if (!drag.moved && event.pointerType !== "mouse") {
+          setShowChrome((visible) => !visible);
+        }
       }}
       onPointerCancel={() => {
         if (dragState.current) endGesture();
@@ -275,7 +299,7 @@ function PrompterStage({
             type="button"
             onClick={() => void toggleFullscreen()}
             aria-label="Fullscreen"
-            className="text-stage-muted transition-colors hover:text-stage-ink"
+            className="inline-flex h-11 w-11 items-center justify-center text-stage-muted transition-colors hover:text-stage-ink"
           >
             <ArrowsOut size={17} weight="bold" />
           </button>
@@ -284,7 +308,7 @@ function PrompterStage({
             onClick={() => setShowHelp(true)}
             aria-label="Keyboard shortcuts"
             title="Keyboard shortcuts"
-            className="text-stage-muted transition-colors hover:text-stage-ink"
+            className="inline-flex h-11 w-11 items-center justify-center text-stage-muted transition-colors hover:text-stage-ink"
           >
             <Keyboard size={17} weight="bold" />
           </button>
@@ -294,7 +318,7 @@ function PrompterStage({
             aria-label="Settings"
             aria-pressed={showSettings}
             className={cn(
-              "transition-colors",
+              "inline-flex h-11 w-11 items-center justify-center transition-colors",
               showSettings
                 ? "text-brand"
                 : "text-stage-muted hover:text-stage-ink",
@@ -355,13 +379,13 @@ function PrompterStage({
               type="button"
               onClick={() => setShowSettings(false)}
               aria-label="Close settings"
-              className="text-stage-muted transition-colors hover:text-stage-ink"
+              className="inline-flex h-11 w-11 items-center justify-center text-stage-muted transition-colors hover:text-stage-ink"
             >
               <X size={17} weight="bold" />
             </button>
           </div>
 
-          <div className="no-scrollbar flex-1 overflow-y-auto px-5 py-6">
+          <div className="no-scrollbar flex-1 overflow-y-auto overscroll-contain px-5 py-6">
             <SettingsPanel
               state={state}
               onChange={(patch) => dispatch({ k: "settings", patch })}
