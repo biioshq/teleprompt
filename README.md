@@ -84,7 +84,9 @@ AUTH_GOOGLE_SECRET="…"
 AUTH_GITHUB_ID="…"
 AUTH_GITHUB_SECRET="…"
 
-DATABASE_URL="postgresql://postgres:PASSWORD@db.REF.supabase.co:5432/postgres?sslmode=require"
+# A pooler URI, not the direct db.<ref>.supabase.co endpoint - that one is
+# IPv6-only and unreachable from Vercel. Username is postgres.<project-ref>.
+DATABASE_URL="postgresql://postgres.REF:PASSWORD@aws-0-REGION.pooler.supabase.com:6543/postgres?sslmode=require"
 
 NEXT_PUBLIC_SUPABASE_URL="https://REF.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="…"

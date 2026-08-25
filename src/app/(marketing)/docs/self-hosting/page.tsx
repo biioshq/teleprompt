@@ -68,18 +68,36 @@ cp .env.example .env`}</code>
           browser.
         </li>
         <li>
-          Go to <strong>Project Settings &rarr; Database</strong> and copy a
-          connection string.
+          Go to <strong>Project Settings &rarr; Database</strong> and copy the{" "}
+          <strong>Transaction pooler</strong> connection string. Read the note
+          below before reaching for the direct one.
         </li>
       </ol>
 
-      <Note tone="blue" title="Which connection string">
-        The direct <code>db.&lt;ref&gt;.supabase.co:5432</code> endpoint is
-        IPv6-only on newer projects. If your host has no IPv6 route, use the{" "}
-        <strong>session pooler</strong> (port 5432) or the{" "}
-        <strong>transaction pooler</strong> (port 6543) instead — the app
-        detects the transaction pooler and disables prepared statements
-        automatically. Append <code>?sslmode=require</code> either way.
+      <Note tone="coral" title="Use a pooler, not the direct endpoint">
+        The direct <code>db.&lt;ref&gt;.supabase.co</code> endpoint resolves to
+        an <strong>IPv6 address only</strong> - it has no A record at all. Hosts
+        without IPv6 egress, which includes Vercel&rsquo;s functions, simply
+        cannot reach it.
+        <br />
+        <br />
+        Nothing in the resulting error mentions the database. The adapter throws
+        while Auth.js is handling the request, so what you actually see is{" "}
+        <em>
+          &ldquo;This deployment&rsquo;s sign-in is misconfigured&rdquo;
+        </em>{" "}
+        on the sign-in page, in production only, with the same environment
+        variables that work locally.
+        <br />
+        <br />
+        So use a pooler URI. Two things differ from the direct string: the host
+        becomes <code>aws-0-&lt;region&gt;.pooler.supabase.com</code>, and the
+        username becomes <code>postgres.&lt;project-ref&gt;</code> rather than
+        plain <code>postgres</code>. Port 6543 is the transaction pooler, which
+        suits serverless; port 5432 is the session pooler, which behaves like a
+        direct connection. The app detects the transaction pooler and turns off
+        prepared statements by itself. Append <code>?sslmode=require</code>{" "}
+        either way.
       </Note>
 
       <p>
@@ -185,7 +203,7 @@ AUTH_GOOGLE_SECRET="…"
 AUTH_GITHUB_ID="…"
 AUTH_GITHUB_SECRET="…"
 
-DATABASE_URL="postgresql://postgres:PASSWORD@db.REF.supabase.co:5432/postgres?sslmode=require"
+DATABASE_URL="postgresql://postgres.REF:PASSWORD@aws-0-REGION.pooler.supabase.com:6543/postgres?sslmode=require"
 
 NEXT_PUBLIC_SUPABASE_URL="https://REF.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="…"
@@ -313,7 +331,8 @@ npm run preview    # build, then serve it`}</code>
             </td>
             <td>Yes</td>
             <td>
-              Postgres. Add <code>?sslmode=require</code> for Supabase.
+              Postgres. Use a pooler host, not the IPv6-only direct endpoint,
+              and add <code>?sslmode=require</code>.
             </td>
           </tr>
           <tr>

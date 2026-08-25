@@ -28,6 +28,7 @@ export default function Page() {
         { id: "ios", label: "iOS oddities" },
         { id: "stuck", label: "A device is stuck connecting" },
         { id: "signin", label: "Sign-in fails" },
+        { id: "prod-only", label: "Works locally, fails deployed" },
       ]}
     >
       <h2 id="code">The code will not resolve</h2>
@@ -175,6 +176,46 @@ export default function Page() {
         <code>.../callback/github</code>. Remember that a GitHub OAuth App holds
         only one callback URL, so development and production need separate apps.
       </p>
+      <h2 id="prod-only">Works locally, fails deployed</h2>
+      <p>
+        The specific shape of this one:{" "}
+        <em>&ldquo;This deployment&rsquo;s sign-in is misconfigured&rdquo;</em>{" "}
+        in production, with the identical environment variables that work on
+        your machine.
+      </p>
+      <p>
+        The usual cause is not the auth configuration at all. It is{" "}
+        <code>DATABASE_URL</code> pointing at Supabase&rsquo;s direct{" "}
+        <code>db.&lt;ref&gt;.supabase.co</code> endpoint, which resolves to an
+        IPv6 address <strong>only</strong>. Your laptop has IPv6, so it
+        connects. Vercel&rsquo;s functions do not, so they cannot. Auth.js
+        reaches for the adapter, the adapter cannot reach Postgres, and what
+        arrives in the browser is a generic configuration error that never
+        mentions a database.
+      </p>
+      <p>Confirm it in a terminal:</p>
+      <pre>
+        <code>{`# no output means no IPv4 address, and no route from Vercel
+dig +short A db.YOUR_REF.supabase.co`}</code>
+      </pre>
+      <p>
+        The fix is a pooler URI, from{" "}
+        <strong>Project Settings &rarr; Database</strong>. Note that the
+        username changes to <code>postgres.&lt;project-ref&gt;</code>:
+      </p>
+      <pre>
+        <code>{`DATABASE_URL="postgresql://postgres.REF:PASSWORD@aws-0-REGION.pooler.supabase.com:6543/postgres?sslmode=require"`}</code>
+      </pre>
+      <p>
+        Redeploy afterwards. <code>DATABASE_URL</code> is read at run time, but
+        a running deployment will not pick up a changed variable on its own.
+      </p>
+      <p>
+        If the database is reachable and the error persists, check that{" "}
+        <code>AUTH_SECRET</code> is actually set in the deployed environment. A
+        missing secret produces the same message.
+      </p>
+
       <p>
         <strong>&ldquo;No providers configured&rdquo;</strong> means neither
         credential pair is set. The sign-in page names the variables it is
