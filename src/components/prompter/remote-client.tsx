@@ -463,7 +463,9 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
           speedWpm={state.speedWpm}
         />
 
-        <div className="mt-4 flex items-center justify-center gap-3">
+        {/* The microphone wraps below the transport on a narrow phone. Five
+            large round controls already fill a 360px screen edge to edge. */}
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
           <TransportControls
             isPlaying={state.isPlaying}
             dispatch={command}
@@ -486,7 +488,10 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
           </p>
         ) : null}
 
-        <div className="mt-4 flex items-center justify-between">
+        {/* Wraps rather than clips. On a narrow phone the pace pill, the state
+            badge and the settings button do not fit on one line, and the one
+            that runs off the edge is the one you reach for. */}
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-3 sm:justify-between">
           <SpeedNudge speedWpm={state.speedWpm} dispatch={command} />
           {state.voiceTracking ? (
             <Badge tone="brand">Listening</Badge>

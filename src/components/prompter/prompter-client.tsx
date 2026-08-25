@@ -426,9 +426,11 @@ function PrompterStage({
             totalWords={totalWords}
             speedWpm={state.speedWpm}
           />
-          <div className="flex items-center justify-between gap-4">
+          {/* Same reason as the remote: a phone used as the display cannot fit
+              the transport, the pace and the microphone on one line. */}
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-3 sm:justify-between">
             <SpeedNudge speedWpm={state.speedWpm} dispatch={dispatch} />
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center justify-center gap-3">
               <TransportControls
                 isPlaying={state.isPlaying}
                 dispatch={dispatch}

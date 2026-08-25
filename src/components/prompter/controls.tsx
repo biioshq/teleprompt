@@ -8,9 +8,9 @@ import {
   EyeSlash,
   FlipHorizontal,
   FlipVertical,
+  Gauge,
   Pause,
   Play,
-  TextAa,
 } from "@phosphor-icons/react/dist/ssr";
 
 import {
@@ -218,7 +218,7 @@ export function SettingsPanel({
   return (
     <div className={cn("space-y-5", className)}>
       <StageSlider
-        label="Pace"
+        label="Reading pace"
         value={state.speedWpm}
         min={LIMITS.speedWpm.min}
         max={LIMITS.speedWpm.max}
@@ -345,6 +345,15 @@ export function SettingsPanel({
   );
 }
 
+/**
+ * Reading pace, in the chrome, next to the transport.
+ *
+ * The unit is not decoration. This sat next to a type-size glyph and a bare
+ * number for long enough to be reported as one: `Aa 130` is a font size to
+ * anyone who has not read the documentation, and it is the one control in the
+ * chrome whose number could plausibly be either. A gauge and the letters wpm
+ * cost a few pixels and remove the question.
+ */
 export function SpeedNudge({
   speedWpm,
   dispatch,
@@ -353,23 +362,31 @@ export function SpeedNudge({
   dispatch: (command: Command) => void;
 }) {
   return (
-    <div className="flex items-center gap-1 rounded-full border border-stage-line px-1 py-1">
+    <div
+      role="group"
+      aria-label="Reading pace, in words per minute"
+      title="Reading pace, in words per minute"
+      className="flex shrink-0 items-center gap-1 rounded-full border border-stage-line px-1 py-1"
+    >
       <button
         type="button"
         onClick={() => dispatch({ k: "speed", delta: -10 })}
-        aria-label="Slower"
+        aria-label="Ten words per minute slower"
         className="h-8 w-8 rounded-full font-mono text-sm text-stage-muted transition-colors hover:text-stage-ink"
       >
         −
       </button>
-      <span className="flex items-center gap-1 px-1 font-mono text-[0.6875rem] text-stage-ink tabular">
-        <TextAa size={13} weight="bold" className="text-brand" />
+      <span className="flex items-center gap-1.5 px-1 font-mono text-[0.6875rem] text-stage-ink tabular">
+        <Gauge size={13} weight="bold" className="shrink-0 text-brand" />
         {speedWpm}
+        <span className="text-[0.5625rem] tracking-[0.08em] text-stage-muted uppercase">
+          wpm
+        </span>
       </span>
       <button
         type="button"
         onClick={() => dispatch({ k: "speed", delta: 10 })}
-        aria-label="Faster"
+        aria-label="Ten words per minute faster"
         className="h-8 w-8 rounded-full font-mono text-sm text-stage-muted transition-colors hover:text-stage-ink"
       >
         +
