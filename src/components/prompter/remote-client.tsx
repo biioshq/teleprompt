@@ -1,0 +1,354 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowsInLineVertical,
+  ArrowsOutLineVertical,
+  DeviceMobile,
+  Gear,
+  X,
+} from "@phosphor-icons/react/dist/ssr";
+
+import { ConnectionBadge } from "~/components/prompter/connection-badge";
+import {
+  SettingsPanel,
+  SpeedNudge,
+  TransportControls,
+} from "~/components/prompter/controls";
+import { ProgressReadout } from "~/components/prompter/progress";
+import {
+  ExitLink,
+  StageLoading,
+  StageMessage,
+} from "~/components/prompter/room-status";
+import { ScriptCanvas } from "~/components/prompter/script-canvas";
+import { useRoomBootstrap } from "~/components/prompter/use-room-bootstrap";
+import { useRoomSession } from "~/components/prompter/use-room-session";
+import { useScrub } from "~/components/prompter/use-scrub";
+import { Badge } from "~/components/ui/badge";
+import { clamp, type PrompterState } from "~/lib/prompter/state";
+import { useWakeLock } from "~/lib/pwa";
+
+/** Distance a finger may travel before a tap becomes a scrub. */
+const TAP_SLOP_PX = 8;
+
+const MIRROR_SIZES = [16, 19, 23, 28] as const;
+
+function buzz(ms = 8) {
+  if (typeof navigator === "undefined") return;
+  if (typeof navigator.vibrate !== "function") return;
+  navigator.vibrate(ms);
+}
+
+export function RemoteClient({ roomId }: { roomId: string }) {
+  const { room, isLoading, error, refetch } = useRoomBootstrap(
+    roomId,
+    "remote",
+  );
+
+  if (isLoading) return <StageLoading label="Connecting the remote" />;
+
+  if (error || !room) {
+    return (
+      <StageMessage
+        title="Room not available"
+        detail={
+          error?.message ??
+          "This room is not on the signed-in account, or it has ended. Both devices have to be signed in as the same person."
+        }
+      />
+    );
+  }
+
+  return <RemoteStage room={room} onReload={() => void refetch()} />;
+}
+
+type Room = NonNullable<ReturnType<typeof useRoomBootstrap>["room"]>;
+
+function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
+  const [mirrorIndex, setMirrorIndex] = useState(1);
+  const [showSettings, setShowSettings] = useState(false);
+
+  /**
+   * The remote deliberately does *not* render at the display's type size. It
+   * shows the same words, laid out for a phone in the hand. This is only
+   * possible because devices agree on a text anchor rather than a scroll
+   * offset — see `lib/prompter/state.ts`.
+   */
+  const deriveViewState = useCallback(
+    (state: PrompterState): PrompterState => ({
+      ...state,
+      fontSize: MIRROR_SIZES[mirrorIndex] ?? 19,
+      lineHeight: 1.45,
+      contentWidth: 100,
+      readingLine: 0.32,
+      flipHorizontal: false,
+      flipVertical: false,
+      showReadingLine: true,
+      theme: "night",
+    }),
+    [mirrorIndex],
+  );
+
+  const session = useRoomSession({
+    room,
+    role: "remote",
+    onReload,
+    deriveViewState,
+  });
+  const {
+    state,
+    viewState,
+    engine,
+    viewportRef,
+    contentRef,
+    dispatch,
+    totalWords,
+  } = session;
+
+  useWakeLock(true);
+
+  useEffect(() => {
+    document.body.dataset.surface = "stage";
+    return () => {
+      delete document.body.dataset.surface;
+    };
+  }, []);
+
+  // Ask the display for the truth as soon as the remote is on the channel.
+  const asked = useRef(false);
+  useEffect(() => {
+    if (asked.current) return;
+    if (session.peers.length === 0) return;
+    asked.current = true;
+    dispatch({ k: "requestState" });
+  }, [dispatch, session.peers.length]);
+
+  const command = useCallback(
+    (...args: Parameters<typeof dispatch>) => {
+      buzz();
+      dispatch(...args);
+    },
+    [dispatch],
+  );
+
+  /* --- Tap to seek, drag to scrub ---------------------------------------- */
+
+  const gesture = useRef<{
+    pointerId: number;
+    startY: number;
+    lastY: number;
+    moved: boolean;
+  } | null>(null);
+
+  const { scrubPixels, beginGesture, endGesture } = useScrub({
+    engine,
+    driving: false,
+    dispatch,
+    viewportRef,
+  });
+
+  const onPointerDown = (event: React.PointerEvent) => {
+    gesture.current = {
+      pointerId: event.pointerId,
+      startY: event.clientY,
+      lastY: event.clientY,
+      moved: false,
+    };
+  };
+
+  const onPointerMove = (event: React.PointerEvent) => {
+    const active = gesture.current;
+    if (!active || active.pointerId !== event.pointerId) return;
+    const delta = active.lastY - event.clientY;
+    active.lastY = event.clientY;
+
+    if (
+      !active.moved &&
+      Math.abs(event.clientY - active.startY) > TAP_SLOP_PX
+    ) {
+      active.moved = true;
+      // Take local authority so the text tracks the finger immediately,
+      // instead of waiting for the display to echo the scrub back.
+      beginGesture();
+    }
+    if (active.moved) scrubPixels(delta);
+  };
+
+  const onPointerUp = (event: React.PointerEvent) => {
+    const active = gesture.current;
+    gesture.current = null;
+    if (!active) return;
+
+    if (active.moved) {
+      endGesture();
+      return;
+    }
+
+    const target = (event.target as HTMLElement).closest<HTMLElement>(
+      "[data-tp-block]",
+    );
+    if (!target) return;
+    const index = Number(target.dataset.tpBlock);
+    if (Number.isNaN(index)) return;
+    buzz(12);
+    dispatch({ k: "seek", anchor: { blockIndex: index, blockFraction: 0 } });
+  };
+
+  const waiting = useMemo(
+    () => session.peers.filter((peer) => peer.role === "prompter").length === 0,
+    [session.peers],
+  );
+
+  return (
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-stage">
+      {/* Header ----------------------------------------------------------- */}
+      <header className="flex shrink-0 items-center gap-3 border-b border-stage-line px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
+        <DeviceMobile size={15} weight="bold" className="shrink-0 text-brand" />
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-stage-ink">
+          {room.title}
+        </span>
+        <ConnectionBadge
+          status={session.status}
+          transport={session.transport}
+          latencyMs={session.latencyMs}
+          peers={session.peers}
+        />
+        <ExitLink roomId={room.id} />
+      </header>
+
+      {waiting ? (
+        <div className="flex shrink-0 items-center gap-3 border-b border-stage-line bg-stage-raised px-4 py-3">
+          <span className="animate-live inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
+          <p className="text-[0.8125rem] leading-snug text-stage-muted">
+            No display connected yet. Open{" "}
+            <span className="font-mono text-stage-ink">{room.code}</span> on the
+            device your audience sees.
+          </p>
+        </div>
+      ) : null}
+
+      {/* Mirror ----------------------------------------------------------- */}
+      <div
+        className="relative min-h-0 flex-1 touch-none"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={() => {
+          if (gesture.current?.moved) endGesture();
+          gesture.current = null;
+        }}
+      >
+        <ScriptCanvas
+          content={room.content}
+          state={viewState}
+          viewportRef={viewportRef}
+          contentRef={contentRef}
+          interactive
+        />
+
+        <div className="absolute top-3 right-3 z-10 flex flex-col gap-1.5">
+          <button
+            type="button"
+            onClick={() =>
+              setMirrorIndex((index) =>
+                clamp(index + 1, 0, MIRROR_SIZES.length - 1),
+              )
+            }
+            aria-label="Larger text on the remote"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-stage-line bg-stage/80 text-stage-muted backdrop-blur transition-colors hover:text-stage-ink"
+          >
+            <ArrowsOutLineVertical size={15} weight="bold" />
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              setMirrorIndex((index) =>
+                clamp(index - 1, 0, MIRROR_SIZES.length - 1),
+              )
+            }
+            aria-label="Smaller text on the remote"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-stage-line bg-stage/80 text-stage-muted backdrop-blur transition-colors hover:text-stage-ink"
+          >
+            <ArrowsInLineVertical size={15} weight="bold" />
+          </button>
+        </div>
+
+        <p className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 font-mono text-[0.5625rem] tracking-[0.16em] text-stage-muted uppercase opacity-60">
+          Tap a line to jump · drag to scrub
+        </p>
+      </div>
+
+      {/* Controls --------------------------------------------------------- */}
+      <footer className="shrink-0 border-t border-stage-line px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <ProgressReadout
+          engine={engine}
+          totalWords={totalWords}
+          speedWpm={state.speedWpm}
+        />
+
+        <div className="mt-4">
+          <TransportControls
+            isPlaying={state.isPlaying}
+            dispatch={command}
+            size="lg"
+          />
+        </div>
+
+        <div className="mt-4 flex items-center justify-between">
+          <SpeedNudge speedWpm={state.speedWpm} dispatch={command} />
+          {state.isPlaying ? (
+            <Badge tone="brand">Rolling</Badge>
+          ) : (
+            <Badge tone="stage">Held</Badge>
+          )}
+          <button
+            type="button"
+            onClick={() => setShowSettings(true)}
+            className="inline-flex h-10 items-center gap-2 rounded-full border border-stage-line px-4 text-[0.8125rem] text-stage-muted transition-colors hover:text-stage-ink"
+          >
+            <Gear size={15} weight="bold" />
+            Display
+          </button>
+        </div>
+      </footer>
+
+      {/* Settings sheet --------------------------------------------------- */}
+      {showSettings ? (
+        <div
+          className="fixed inset-0 z-40 flex items-end bg-black/60"
+          onClick={() => setShowSettings(false)}
+        >
+          <div
+            className="max-h-[85dvh] w-full overflow-y-auto rounded-t-xl border-t border-stage-line bg-stage-raised px-5 pt-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-stage-ink">
+                  Display settings
+                </p>
+                <p className="mt-0.5 text-[0.75rem] text-stage-muted">
+                  These change the other screen, not this one.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSettings(false)}
+                aria-label="Close"
+                className="text-stage-muted transition-colors hover:text-stage-ink"
+              >
+                <X size={18} weight="bold" />
+              </button>
+            </div>
+
+            <SettingsPanel
+              state={state}
+              onChange={(patch) => dispatch({ k: "settings", patch })}
+            />
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}

@@ -1,0 +1,523 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   Teleprompt design tokens.
+
+   The palette, the hard offset shadows and the type stack are taken from the
+   Biios system (biios.in) so the two read as one house. Teleprompt adds only
+   what a prompter needs: a set of stage-dark surfaces for the reading view.
+   ========================================================================== */
+
+@theme {
+  /* Type ------------------------------------------------------------------ */
+  --font-sans:
+    var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display:
+    var(--font-familjen), var(--font-jakarta), ui-sans-serif, system-ui,
+    sans-serif;
+  --font-poster:
+    var(--font-bebas), var(--font-familjen), ui-sans-serif, sans-serif;
+  --font-mono:
+    var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Warm monochrome canvas ------------------------------------------------ */
+  --color-paper: #fff9f4;
+  --color-paper-deep: #f7f0e8;
+  --color-surface: #ffffff;
+  --color-ink: #1a1a1b;
+  --color-ink-soft: #3d3c3a;
+  --color-muted: #6a655d;
+  --color-faint: #99938a;
+  --color-line: #ebe5db;
+  --color-line-firm: #ddd5c8;
+
+  /* Accent ---------------------------------------------------------------- */
+  --color-brand: #ff8800;
+  --color-brand-deep: #c26200;
+  --color-brand-soft: #fff1e0;
+
+  /* Supporting spots — used sparingly, for meaning only ------------------- */
+  --color-jade: #34ad6c;
+  --color-jade-soft: #e6f4ec;
+  --color-coral: #f74445;
+  --color-coral-soft: #fdeaea;
+  --color-blue: #3a6ea5;
+  --color-blue-soft: #e8eff7;
+  --color-lime: #d5f170;
+  --color-citrine: #f0d80b;
+  --color-navy: #0b1929;
+
+  /* Stage surfaces — the prompter and the remote -------------------------- */
+  --color-stage: #0b0b0c;
+  --color-stage-raised: #161617;
+  --color-stage-line: #2a2a2c;
+  --color-stage-ink: #f6f5f3;
+  --color-stage-muted: #85838a;
+
+  /* Structure ------------------------------------------------------------- */
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Hard offset shadows are the Biios signature. No blurred drop shadows. */
+  --shadow-hard: 3px 3px 0 var(--color-ink);
+  --shadow-hard-sm: 2px 2px 0 var(--color-ink);
+  --shadow-hard-lg: 5px 5px 0 var(--color-ink);
+  --shadow-hard-brand: 3px 3px 0 var(--color-brand);
+  --shadow-hard-line: 3px 3px 0 var(--color-line-firm);
+  --shadow-lift:
+    0 1px 2px rgb(26 26 27 / 0.04), 0 8px 24px rgb(26 26 27 / 0.04);
+
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
+@layer base {
+  * {
+    border-color: var(--color-line);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    /* `clip` rather than `hidden`: it contains a stray overflowing element
+       without breaking `position: sticky` on the headers. */
+    overflow-x: clip;
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-feature-settings:
+      "cv05" 1,
+      "ss01" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display);
+    letter-spacing: -0.025em;
+    line-height: 1.08;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background: var(--color-brand);
+    color: #fff;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* The reading surfaces opt out of the paper canvas entirely. */
+  body[data-surface="stage"] {
+    background-color: var(--color-stage);
+    color: var(--color-stage-ink);
+    overscroll-behavior: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* ==========================================================================
+   Utilities
+   ========================================================================== */
+
+/* A single hairline of warm paper grain. Keeps large flat areas from reading
+   as flat digital fill without introducing a gradient. */
+@utility grain {
+  position: relative;
+  isolation: isolate;
+}
+@utility grain-layer {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Editorial eyebrow above a heading. */
+@utility eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+@utility rule-grid {
+  background-image:
+    linear-gradient(to right, var(--color-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-line) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   Components
+   ========================================================================== */
+
+@layer components {
+  /* --- Prose, used by the docs and the markdown preview ------------------ */
+  .prose-tp {
+    color: var(--color-ink-soft);
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+  .prose-tp > * + * {
+    margin-top: 1.15em;
+  }
+  .prose-tp h2 {
+    margin-top: 2.5em;
+    margin-bottom: 0.7em;
+    font-size: 1.5rem;
+    color: var(--color-ink);
+    scroll-margin-top: 6rem;
+  }
+  .prose-tp h3 {
+    margin-top: 2em;
+    margin-bottom: 0.5em;
+    font-size: 1.125rem;
+    color: var(--color-ink);
+    scroll-margin-top: 6rem;
+  }
+  .prose-tp h4 {
+    margin-top: 1.6em;
+    font-size: 1rem;
+    color: var(--color-ink);
+  }
+  .prose-tp a {
+    color: var(--color-ink);
+    text-decoration: underline;
+    text-decoration-color: var(--color-brand);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+  }
+  .prose-tp a:hover {
+    color: var(--color-brand-deep);
+  }
+  .prose-tp strong {
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+  .prose-tp ul,
+  .prose-tp ol {
+    padding-left: 1.25rem;
+  }
+  .prose-tp ul {
+    list-style: none;
+  }
+  .prose-tp ul > li {
+    position: relative;
+    padding-left: 0.25rem;
+  }
+  .prose-tp ul > li::before {
+    content: "";
+    position: absolute;
+    left: -0.95rem;
+    top: 0.72em;
+    width: 6px;
+    height: 6px;
+    background: var(--color-brand);
+  }
+  .prose-tp ol {
+    list-style: decimal;
+  }
+  .prose-tp li + li {
+    margin-top: 0.45rem;
+  }
+  .prose-tp code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    background: var(--color-brand-soft);
+    color: var(--color-brand-deep);
+    padding: 0.15em 0.4em;
+    border-radius: var(--radius-xs);
+  }
+  .prose-tp pre {
+    background: var(--color-ink);
+    color: #f0ede8;
+    padding: 1.1rem 1.25rem;
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+    font-size: 0.8125rem;
+    line-height: 1.65;
+    box-shadow: var(--shadow-hard-brand);
+  }
+  .prose-tp pre code {
+    background: none;
+    color: inherit;
+    padding: 0;
+    font-size: inherit;
+  }
+  .prose-tp blockquote {
+    border-left: 3px solid var(--color-brand);
+    padding-left: 1rem;
+    color: var(--color-muted);
+  }
+  .prose-tp table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    display: block;
+    overflow-x: auto;
+  }
+  .prose-tp th,
+  .prose-tp td {
+    border: 1px solid var(--color-line);
+    padding: 0.55rem 0.75rem;
+    text-align: left;
+    vertical-align: top;
+  }
+  .prose-tp th {
+    background: var(--color-paper-deep);
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+  .prose-tp hr {
+    border: 0;
+    border-top: 1px solid var(--color-line);
+  }
+  .prose-tp img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius-md);
+  }
+
+  /* --- Markdown editor skin --------------------------------------------- */
+  /* @uiw/react-md-editor ships its own tokens; these bend it onto the Biios
+     palette instead of fighting it with overrides at every call site. */
+  .tp-editor .w-md-editor {
+    background: var(--color-surface);
+    color: var(--color-ink);
+    box-shadow: none;
+    border-radius: 0;
+    --color-border-default: var(--color-line);
+    --color-canvas-default: var(--color-surface);
+    --color-canvas-subtle: var(--color-paper);
+    --color-fg-default: var(--color-ink);
+    --color-fg-muted: var(--color-muted);
+    --color-accent-fg: var(--color-brand-deep);
+  }
+  .tp-editor .w-md-editor-toolbar {
+    background: var(--color-paper);
+    border-bottom: 1px solid var(--color-line);
+    padding: 6px 8px;
+  }
+  .tp-editor .w-md-editor-toolbar li > button {
+    color: var(--color-muted);
+    border-radius: var(--radius-xs);
+  }
+  .tp-editor .w-md-editor-toolbar li > button:hover {
+    background: var(--color-brand-soft);
+    color: var(--color-brand-deep);
+  }
+  .tp-editor .w-md-editor-toolbar li.active > button {
+    background: var(--color-ink);
+    color: var(--color-paper);
+  }
+  .tp-editor .w-md-editor-text-input,
+  .tp-editor .w-md-editor-text-pre > code,
+  .tp-editor .w-md-editor-text-pre {
+    font-family: var(--font-mono) !important;
+    font-size: 14px !important;
+    line-height: 1.75 !important;
+  }
+  .tp-editor .w-md-editor-preview {
+    background: var(--color-paper);
+    box-shadow: inset 1px 0 0 0 var(--color-line);
+  }
+  .tp-editor .wmde-markdown {
+    background: transparent;
+    font-family: var(--font-sans);
+  }
+
+  /* --- Stage controls ---------------------------------------------------- */
+  .stage-panel {
+    background: var(--color-stage-raised);
+    border: 1px solid var(--color-stage-line);
+    border-radius: var(--radius-lg);
+  }
+
+  input[type="range"].tp-range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 28px;
+    background: transparent;
+    cursor: pointer;
+  }
+  input[type="range"].tp-range::-webkit-slider-runnable-track {
+    height: 4px;
+    background: var(--color-stage-line);
+    border-radius: 2px;
+  }
+  input[type="range"].tp-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    margin-top: -8px;
+    border-radius: 50%;
+    background: var(--color-brand);
+    border: 2px solid var(--color-stage);
+  }
+  input[type="range"].tp-range::-moz-range-track {
+    height: 4px;
+    background: var(--color-stage-line);
+    border-radius: 2px;
+  }
+  input[type="range"].tp-range::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--color-brand);
+    border: 2px solid var(--color-stage);
+  }
+  input[type="range"].tp-range.on-paper::-webkit-slider-runnable-track {
+    background: var(--color-line-firm);
+  }
+  input[type="range"].tp-range.on-paper::-webkit-slider-thumb {
+    border-color: var(--color-paper);
+  }
+  input[type="range"].tp-range.on-paper::-moz-range-track {
+    background: var(--color-line-firm);
+  }
+  input[type="range"].tp-range.on-paper::-moz-range-thumb {
+    border-color: var(--color-paper);
+  }
+
+  /* The prompter fades text in and out at the edges of the frame so the eye
+     is drawn to the reading line rather than to whatever is at the top. */
+  .stage-fade {
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      #000 14%,
+      #000 82%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      #000 14%,
+      #000 82%,
+      transparent 100%
+    );
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ==========================================================================
+   Motion
+   ========================================================================== */
+
+@keyframes tp-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes tp-pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgb(255 136 0 / 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 9px rgb(255 136 0 / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(255 136 0 / 0);
+  }
+}
+
+@keyframes tp-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-rise {
+  animation: tp-rise 0.6s var(--ease-out-quint) both;
+}
+.animate-live {
+  animation: tp-pulse-ring 2s ease-out infinite;
+}
+.animate-marquee {
+  animation: tp-marquee 38s linear infinite;
+}
+
+/* The landing-page prompter demo: both panels scroll in `em`, so a phone-sized
+   panel and a display-sized panel stay on the same line at different type
+   sizes — the same property the real product relies on. */
+@keyframes tp-demo-scroll {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(0, calc(-1 * var(--tp-demo-lines, 12) * 1.75em), 0);
+  }
+}
+
+.animate-prompter {
+  animation: tp-demo-scroll var(--tp-demo-duration, 30s) linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-prompter {
+    animation: none;
+    transform: translate3d(0, calc(-1 * var(--tp-demo-lines, 12) * 0.5em), 0);
+  }
+}

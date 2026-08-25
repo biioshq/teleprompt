@@ -1,0 +1,68 @@
+{
+  "name": "teleprompt",
+  "version": "0.1.0",
+  "private": false,
+  "license": "MIT",
+  "description": "A peer-to-peer teleprompter. One device shows the words, another drives them.",
+  "homepage": "https://github.com/biioshq/teleprompt",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/biioshq/teleprompt.git"
+  },
+  "author": "Biios (https://biios.in)",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --turbo",
+    "build": "next build",
+    "start": "next start",
+    "preview": "next build && next start",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write \"**/*.{ts,tsx,js,mjs,cjs,json,css,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,cjs,json,css,md}\"",
+    "brand": "node scripts/generate-brand-assets.mjs",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@auth/drizzle-adapter": "^1.7.2",
+    "@phosphor-icons/react": "^2.1.7",
+    "@supabase/supabase-js": "^2.48.1",
+    "@t3-oss/env-nextjs": "^0.12.0",
+    "@tanstack/react-query": "^5.69.0",
+    "@trpc/client": "^11.0.0",
+    "@trpc/react-query": "^11.0.0",
+    "@trpc/server": "^11.0.0",
+    "@uiw/react-md-editor": "^4.0.5",
+    "clsx": "^2.1.1",
+    "drizzle-orm": "^0.41.0",
+    "next": "^15.2.3",
+    "next-auth": "5.0.0-beta.25",
+    "postgres": "^3.4.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-markdown": "^9.0.3",
+    "remark-gfm": "^4.0.0",
+    "server-only": "^0.0.1",
+    "superjson": "^2.2.1",
+    "tailwind-merge": "^3.0.2",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.15",
+    "@types/node": "^20.14.10",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "drizzle-kit": "^0.30.5",
+    "postcss": "^8.5.3",
+    "prettier": "^3.5.3",
+    "prettier-plugin-tailwindcss": "^0.6.11",
+    "tailwindcss": "^4.0.15",
+    "typescript": "^5.8.2"
+  },
+  "ct3aMetadata": {
+    "initVersion": "7.40.0"
+  },
+  "packageManager": "npm@11.17.0"
+}
