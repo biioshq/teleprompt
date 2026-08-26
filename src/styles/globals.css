@@ -522,6 +522,47 @@
     );
   }
 
+  /* --- The landing-page demo -------------------------------------------- */
+
+  /* A deeper fade than the prompter's own. These panels wear chrome the real
+     reading surface does not — a header at the top, a transport at the foot —
+     and text arriving at full strength underneath either of them reads as a
+     collision rather than as a script running past. */
+  .tp-demo-fade {
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      #000 24%,
+      #000 74%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      #000 24%,
+      #000 74%,
+      transparent 100%
+    );
+  }
+
+  /* One line of the demo script. The rows are a fixed number of `em` tall and
+     the engine scrolls by a count of them, so a cue — set several sizes down —
+     cannot shorten its own row and walk every line after it off the reading
+     line.
+
+     Written out here rather than as variants because the order matters: a row
+     that is both hovered and on the reading line is on the reading line. */
+  .tp-demo-line {
+    opacity: 0.45;
+    transition: opacity 200ms ease;
+  }
+  .tp-demo-line[data-tp-hover] {
+    opacity: 0.72;
+  }
+  .tp-demo-line[data-tp-active] {
+    opacity: 1;
+  }
+
   /* Coarse pointers get a bigger thumb and a thicker track: 20px is fine
      under a mouse and fiddly under a fingertip. */
   @media (pointer: coarse) {
@@ -598,29 +639,6 @@
 }
 .animate-marquee {
   animation: tp-marquee 38s linear infinite;
-}
-
-/* The landing-page prompter demo: both panels scroll in `em`, so a phone-sized
-   panel and a display-sized panel stay on the same line at different type
-   sizes — the same property the real product relies on. */
-@keyframes tp-demo-scroll {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-  to {
-    transform: translate3d(0, calc(-1 * var(--tp-demo-lines, 12) * 1.75em), 0);
-  }
-}
-
-.animate-prompter {
-  animation: tp-demo-scroll var(--tp-demo-duration, 30s) linear infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .animate-prompter {
-    animation: none;
-    transform: translate3d(0, calc(-1 * var(--tp-demo-lines, 12) * 0.5em), 0);
-  }
 }
 
 /* ==========================================================================
