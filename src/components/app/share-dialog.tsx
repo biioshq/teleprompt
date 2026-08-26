@@ -12,6 +12,7 @@ import {
 
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
+import { Select, type SelectOption } from "~/components/ui/select";
 import { type ShareRole } from "~/server/db/schema";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
@@ -30,28 +31,31 @@ const ROLE_DETAIL: Record<ShareRole, string> = {
   editor: "Read it, present it, and edit the words.",
 };
 
+const ROLE_OPTIONS: ReadonlyArray<SelectOption<ShareRole>> = [
+  { value: "viewer", label: ROLE_LABEL.viewer },
+  { value: "editor", label: ROLE_LABEL.editor },
+];
+
 function RolePicker({
   value,
   onChange,
   disabled,
-  id,
+  label,
 }: {
   value: ShareRole;
   onChange: (role: ShareRole) => void;
   disabled?: boolean;
-  id?: string;
+  /** Named for a screen reader: there are as many of these as there are rows. */
+  label: string;
 }) {
   return (
-    <select
-      id={id}
+    <Select
       value={value}
+      options={ROLE_OPTIONS}
+      onChange={onChange}
       disabled={disabled}
-      onChange={(event) => onChange(event.target.value as ShareRole)}
-      className="h-9 rounded-sm border border-line bg-surface px-2 text-[0.8125rem] text-ink disabled:opacity-50"
-    >
-      <option value="viewer">{ROLE_LABEL.viewer}</option>
-      <option value="editor">{ROLE_LABEL.editor}</option>
-    </select>
+      aria-label={label}
+    />
   );
 }
 
@@ -153,7 +157,11 @@ export function ShareDialog({
               autoComplete="off"
               className="h-9 min-w-0 flex-1 rounded-sm border border-line bg-paper px-3 text-[0.875rem] text-ink outline-none placeholder:text-faint focus:border-ink"
             />
-            <RolePicker value={role} onChange={setRole} />
+            <RolePicker
+              value={role}
+              onChange={setRole}
+              label="Permission for the person you invite"
+            />
             <Button
               type="submit"
               variant="primary"
@@ -219,6 +227,7 @@ export function ShareDialog({
                     onChange={(next) =>
                       setRoleFor.mutate({ id: person.id, role: next })
                     }
+                    label={`Permission for ${person.name ?? person.email}`}
                   />
                   <button
                     type="button"
