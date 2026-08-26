@@ -1,4 +1,4 @@
-import { and, desc, eq, lt, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
@@ -21,12 +21,15 @@ import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import type { db as database } from "~/server/db";
 import { roomDevices, rooms, scripts } from "~/server/db/schema";
 import { requireScript, viewerFor } from "~/server/library/access";
+import {
+  expiredRatherThanEnded,
+  isLive,
+  staleCutoff,
+  stillLive,
+} from "~/server/rooms/lifetime";
 import { ROLES } from "~/lib/realtime/protocol";
 
 type Db = typeof database;
-
-/** A room nobody has touched for this long is not a live session any more. */
-const STALE_ROOM_HOURS = 12;
 
 async function requireRoom(db: Db, id: string, ownerId: string) {
   const room = await db.query.rooms.findFirst({
@@ -42,26 +45,43 @@ async function requireRoom(db: Db, id: string, ownerId: string) {
   return room;
 }
 
-/** Lazy sweep — cheap, and keeps join codes from being hoarded by dead rooms. */
+/**
+ * Housekeeping, not enforcement.
+ *
+ * `stillLive` is what makes the five minutes true; this is what stamps
+ * `endedAt`, releases the device records, and lets the row stop pretending. It
+ * runs whenever this account opens a room or loads a dashboard — late, but
+ * never wrong, because nothing reads a stale room as live in the meantime.
+ */
 async function endStaleRooms(db: Db, ownerId: string) {
-  const cutoff = new Date(Date.now() - STALE_ROOM_HOURS * 60 * 60 * 1000);
-  await db
+  const ended = await db
     .update(rooms)
     .set({ status: "ended", endedAt: new Date() })
     .where(
       and(
         eq(rooms.ownerId, ownerId),
         eq(rooms.status, "live"),
-        lt(rooms.lastActiveAt, cutoff),
+        lt(rooms.lastActiveAt, staleCutoff()),
       ),
-    );
+    )
+    .returning({ id: rooms.id });
+  if (ended.length === 0) return;
+
+  // Closing a room takes its device records with it, whichever way it closed.
+  // `end` has always done this; the privacy notice says both do.
+  await db.delete(roomDevices).where(
+    inArray(
+      roomDevices.roomId,
+      ended.map((room) => room.id),
+    ),
+  );
 }
 
 async function allocateJoinCode(db: Db): Promise<string> {
   for (let attempt = 0; attempt < 8; attempt += 1) {
     const code = generateJoinCode();
     const clash = await db.query.rooms.findFirst({
-      where: and(eq(rooms.code, code), eq(rooms.status, "live")),
+      where: and(eq(rooms.code, code), stillLive()),
       columns: { id: true },
     });
     if (!clash) return code;
@@ -111,6 +131,10 @@ export const roomRouter = createTRPCRouter({
           content: script.body,
           contentRevision: 1,
           state: { ...DEFAULT_PROMPTER_STATE, updatedAt: Date.now() },
+          // Explicit rather than the column's `CURRENT_TIMESTAMP` default: the
+          // window is judged against this process's clock, so a room has to be
+          // born on that clock or skew could make it expire before it opens.
+          lastActiveAt: new Date(),
         })
         .returning();
 
@@ -135,11 +159,25 @@ export const roomRouter = createTRPCRouter({
         where: eq(roomDevices.roomId, room.id),
         orderBy: [desc(roomDevices.lastSeenAt)],
       });
+      const live = isLive(room);
       return {
         ...room,
+        // The room page has to render "Room ended", so the row comes back
+        // either way — but it must not claim to be live past the cutoff.
+        status: live ? ("live" as const) : ("ended" as const),
+        // So the page can say what happened rather than assume the window ran
+        // out on a room somebody closed deliberately.
+        closedReason: live
+          ? null
+          : expiredRatherThanEnded(room)
+            ? ("expired" as const)
+            : ("closed" as const),
         state: parseState(room.state),
         wordCount: scriptWordCount(room.content),
-        devices,
+        // A closed room has released these, or is about to when the next sweep
+        // reaches it. Listing them under a heading that says the room is over
+        // would contradict both the screen and the privacy notice.
+        devices: live ? devices : [],
       };
     }),
 
@@ -152,14 +190,14 @@ export const roomRouter = createTRPCRouter({
         where: and(
           eq(rooms.code, code),
           eq(rooms.ownerId, ctx.session.user.id),
-          eq(rooms.status, "live"),
+          stillLive(),
         ),
       });
       if (!room) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message:
-            "No live room with that code on this account. Check the code, and check both devices are signed in as the same person.",
+            "No live room with that code on this account. Rooms close after five quiet minutes, so it may have run out — otherwise check the code, and check both devices are signed in as the same person.",
         });
       }
       return { id: room.id, title: room.title, code: room.code };
@@ -169,10 +207,7 @@ export const roomRouter = createTRPCRouter({
   listLive: protectedProcedure.query(async ({ ctx }) => {
     await endStaleRooms(ctx.db, ctx.session.user.id);
     const live = await ctx.db.query.rooms.findMany({
-      where: and(
-        eq(rooms.ownerId, ctx.session.user.id),
-        eq(rooms.status, "live"),
-      ),
+      where: and(eq(rooms.ownerId, ctx.session.user.id), stillLive()),
       orderBy: [desc(rooms.lastActiveAt)],
       limit: 20,
     });
@@ -198,7 +233,7 @@ export const roomRouter = createTRPCRouter({
         where: and(
           eq(rooms.scriptId, input.scriptId),
           eq(rooms.ownerId, ctx.session.user.id),
-          eq(rooms.status, "live"),
+          stillLive(),
         ),
         orderBy: [desc(rooms.lastActiveAt)],
         columns: {
@@ -227,7 +262,12 @@ export const roomRouter = createTRPCRouter({
           eq(rooms.id, input.roomId),
           eq(rooms.ownerId, ctx.session.user.id),
         ),
-        columns: { state: true, contentRevision: true, status: true },
+        columns: {
+          state: true,
+          contentRevision: true,
+          status: true,
+          lastActiveAt: true,
+        },
       });
       if (!room) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Room not found." });
@@ -235,7 +275,7 @@ export const roomRouter = createTRPCRouter({
       return {
         state: parseState(room.state),
         contentRevision: room.contentRevision,
-        status: room.status,
+        status: isLive(room) ? ("live" as const) : ("ended" as const),
       };
     }),
 
@@ -244,7 +284,16 @@ export const roomRouter = createTRPCRouter({
     .input(z.object({ roomId: z.string().uuid(), device: deviceInput }))
     .mutation(async ({ ctx, input }) => {
       const room = await requireRoom(ctx.db, input.roomId, ctx.session.user.id);
-      if (room.status === "ended") {
+
+      // The bump is the gate. Checking the row we just read and then writing
+      // would leave a window for the room to expire in between; this way the
+      // room is live as of the statement that claims it, or not at all.
+      const [touched] = await ctx.db
+        .update(rooms)
+        .set({ lastActiveAt: new Date() })
+        .where(and(eq(rooms.id, room.id), stillLive()))
+        .returning({ id: rooms.id });
+      if (!touched) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
           message: "This room has ended. Open a new one from the script.",
@@ -271,41 +320,55 @@ export const roomRouter = createTRPCRouter({
           },
         });
 
-      await ctx.db
-        .update(rooms)
-        .set({ lastActiveAt: new Date() })
-        .where(eq(rooms.id, room.id));
-
       return {
         ...room,
+        // Not the snapshot's status: the update above is what settled it.
+        status: "live" as const,
         state: parseState(room.state),
       };
     }),
 
+  /**
+   * Say the room is still in use.
+   *
+   * `deviceKey` is optional because the room page beats too, and it is not a
+   * device — it is a person looking at the join code. Passing no key keeps it
+   * out of the device list rather than refreshing whatever row this browser
+   * left behind the last time it took a role.
+   */
   heartbeat: protectedProcedure
     .input(
       z.object({
         roomId: z.string().uuid(),
-        deviceKey: z.string().min(8).max(64),
+        deviceKey: z.string().min(8).max(64).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       await requireRoom(ctx.db, input.roomId, ctx.session.user.id);
       const now = new Date();
-      await ctx.db
-        .update(roomDevices)
-        .set({ lastSeenAt: now })
-        .where(
-          and(
-            eq(roomDevices.roomId, input.roomId),
-            eq(roomDevices.deviceKey, input.deviceKey),
-          ),
-        );
-      await ctx.db
+
+      // Guarded, so a device coming back from a long sleep cannot drag a room
+      // back over the line. If this matches nothing the session is over, and
+      // this is the one call that can say so to a device that is still trying.
+      const [touched] = await ctx.db
         .update(rooms)
         .set({ lastActiveAt: now })
-        .where(eq(rooms.id, input.roomId));
-      return { ok: true };
+        .where(and(eq(rooms.id, input.roomId), stillLive()))
+        .returning({ id: rooms.id });
+      if (!touched) return { live: false };
+
+      if (input.deviceKey) {
+        await ctx.db
+          .update(roomDevices)
+          .set({ lastSeenAt: now })
+          .where(
+            and(
+              eq(roomDevices.roomId, input.roomId),
+              eq(roomDevices.deviceKey, input.deviceKey),
+            ),
+          );
+      }
+      return { live: true };
     }),
 
   leave: protectedProcedure
@@ -348,10 +411,13 @@ export const roomRouter = createTRPCRouter({
       // Two devices can both flush; the higher revision is the newer truth.
       if (incoming.revision < current.revision) return current;
 
+      // Guarded so a flush cannot revive a room that has run out. No error
+      // when it matches nothing: the driver flushes every couple of seconds
+      // and the heartbeat is what tells it the session is over.
       await ctx.db
         .update(rooms)
         .set({ state: incoming, lastActiveAt: new Date() })
-        .where(eq(rooms.id, room.id));
+        .where(and(eq(rooms.id, room.id), stillLive()));
       return incoming;
     }),
 
@@ -416,12 +482,19 @@ export const roomRouter = createTRPCRouter({
           })(),
           lastActiveAt: new Date(),
         })
-        .where(eq(rooms.id, room.id))
+        .where(and(eq(rooms.id, room.id), stillLive()))
         .returning();
 
+      if (!updated) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "This room has ended. Open a new one from the script.",
+        });
+      }
+
       return {
-        ...updated!,
-        state: parseState(updated!.state),
+        ...updated,
+        state: parseState(updated.state),
       };
     }),
 

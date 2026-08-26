@@ -36,6 +36,28 @@ export function StageMessage({
   );
 }
 
+/**
+ * Why a room stopped being a room.
+ *
+ * `closed` is somebody pressing End room; `expired` is the window running out.
+ * `unknown` is a device arriving at a room that was already over, where the
+ * stored status cannot tell the two apart — better to say nothing about the
+ * cause than to guess wrong at it.
+ */
+export type ClosedReason = "closed" | "expired" | "unknown";
+
+const CLOSED_DETAIL: Record<ClosedReason, string> = {
+  closed: "Someone ended this room. Open a new one from the script.",
+  expired:
+    "This room went five quiet minutes with nothing on it. Open a new one from the script.",
+  unknown: "This room has ended. Open a new one from the script.",
+};
+
+/** The one terminal screen for a room that is over, however it got there. */
+export function RoomClosed({ reason }: { reason: ClosedReason }) {
+  return <StageMessage title="Room ended" detail={CLOSED_DETAIL[reason]} />;
+}
+
 export function StageLoading({
   label,
   slow = false,

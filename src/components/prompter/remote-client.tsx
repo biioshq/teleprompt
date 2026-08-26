@@ -19,8 +19,10 @@ import {
 import { ProgressReadout } from "~/components/prompter/progress";
 import {
   ExitLink,
+  RoomClosed,
   StageLoading,
   StageMessage,
+  type ClosedReason,
 } from "~/components/prompter/room-status";
 import { ScriptCanvas } from "~/components/prompter/script-canvas";
 import { useRoomBootstrap } from "~/components/prompter/use-room-bootstrap";
@@ -66,10 +68,23 @@ function buzz(ms = 8) {
 }
 
 export function RemoteClient({ roomId }: { roomId: string }) {
-  const { room, isLoading, error, refetch, slow } = useRoomBootstrap(
+  const { room, ended, isLoading, error, refetch, slow } = useRoomBootstrap(
     roomId,
     "remote",
   );
+
+  /**
+   * Held here rather than inside the stage on purpose. A room that is over has
+   * to take the stage down with it — the engine, the realtime link, the wake
+   * lock and the heartbeat all live below this line, and a message painted
+   * over the top of them would leave every one of them running against a room
+   * that no longer exists.
+   */
+  const [closed, setClosed] = useState<ClosedReason | null>(null);
+  const reason = closed ?? (ended ? "unknown" : null);
+  if (reason) {
+    return <RoomClosed reason={reason} />;
+  }
 
   if (isLoading && !room) {
     return (
@@ -96,7 +111,13 @@ export function RemoteClient({ roomId }: { roomId: string }) {
     );
   }
 
-  return <RemoteStage room={room} onReload={() => void refetch()} />;
+  return (
+    <RemoteStage
+      room={room}
+      onReload={() => void refetch()}
+      onEnded={setClosed}
+    />
+  );
 }
 
 type Room = NonNullable<ReturnType<typeof useRoomBootstrap>["room"]>;
@@ -104,7 +125,15 @@ type Room = NonNullable<ReturnType<typeof useRoomBootstrap>["room"]>;
 /** How long the remote waits for a display to confirm before explaining. */
 const VOICE_CONFIRM_MS = 2500;
 
-function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
+function RemoteStage({
+  room,
+  onReload,
+  onEnded,
+}: {
+  room: Room;
+  onReload: () => void;
+  onEnded: (reason: ClosedReason) => void;
+}) {
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const viewportWidth = useViewportWidth();
@@ -139,6 +168,7 @@ function RemoteStage({ room, onReload }: { room: Room; onReload: () => void }) {
     room,
     role: "remote",
     onReload,
+    onEnded,
     deriveViewState,
     /**
      * The remote never listens — it is not the device the reader is speaking

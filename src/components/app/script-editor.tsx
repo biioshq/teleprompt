@@ -60,7 +60,14 @@ export function ScriptEditor({ scriptId }: { scriptId: string }) {
   // A script usually has at most one room open at a time. Opening a second one
   // silently strands the code the other device is already holding, so the
   // existing room is offered first and a new one has to be asked for.
-  const activeRoom = api.room.activeForScript.useQuery({ scriptId });
+  //
+  // Polled, because a room only outlives five quiet minutes and this editor
+  // stays open far longer than that. Offering a code that stopped working
+  // twenty minutes ago is worse than offering nothing.
+  const activeRoom = api.room.activeForScript.useQuery(
+    { scriptId },
+    { refetchInterval: 60_000 },
+  );
 
   const duplicate = api.script.duplicate.useMutation({
     onSuccess: (copy) => {

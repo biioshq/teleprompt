@@ -59,8 +59,8 @@ export default function Page() {
       </p>
       <p>
         Codes are unique among <em>live</em> rooms only. Once a room ends its
-        code goes back into circulation, which is why a code from last week will
-        not resolve.
+        code goes back into circulation, which is why a code from an earlier
+        session will not resolve.
       </p>
 
       <h2 id="roles">Roles</h2>
@@ -122,15 +122,38 @@ export default function Page() {
 
       <h2 id="lifetime">How long a room lives</h2>
       <p>
-        A room stays live while it is being used. Twelve quiet hours after the
+        A room stays live while something is on it. Five quiet minutes after the
         last activity it closes itself, releasing its join code. You can also
         end one deliberately from the room page or from the display&rsquo;s
         settings drawer.
       </p>
+      <p>Three things count as activity:</p>
+      <ul>
+        <li>
+          A display or a remote attached to the room. Each checks in every
+          forty-five seconds, and again the moment it comes back to the
+          foreground.
+        </li>
+        <li>
+          The room page open and <em>visible</em> — which is why walking to the
+          other device does not cost you the room. The page you left the code on
+          counts while you can see it, and stops counting when you switch away.
+        </li>
+        <li>
+          Saving an edit to the script behind the room, since that writes new
+          text into the room itself.
+        </li>
+      </ul>
+      <p>
+        What does not count is a device that has gone to sleep. A phone that
+        locks or a laptop whose lid is shut stops checking in — browsers freeze
+        a hidden tab&rsquo;s timers, and a suspended one sends nothing at all —
+        so a room left on one closes like any other.
+      </p>
       <p>
         Playback position is written back to the database every few seconds, so
-        a device that reloads — or a room you come back to after lunch — picks
-        up within a sentence of where it stopped.
+        a device that reloads — or one that drops off the network and comes back
+        — picks up within a sentence of where it stopped.
       </p>
       <p>
         Editing the script behind a live room is safe. The new text is written

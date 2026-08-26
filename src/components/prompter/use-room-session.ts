@@ -15,6 +15,7 @@ import {
 } from "~/lib/prompter/state";
 import { useSyncLink, type OutgoingMessage } from "~/lib/realtime/link";
 import { type Command, type Message, type Role } from "~/lib/realtime/protocol";
+import { type ClosedReason } from "~/components/prompter/room-status";
 import { useEngine } from "~/components/prompter/use-engine";
 import { api } from "~/trpc/react";
 
@@ -65,7 +66,7 @@ export function useRoomSession({
   room: RoomLike;
   role: Role;
   onReload?: () => void;
-  onEnded?: () => void;
+  onEnded?: (reason: ClosedReason) => void;
   /**
    * Whether this device is able and willing to listen.
    *
@@ -263,7 +264,7 @@ export function useRoomSession({
           broadcastState(stateRef.current);
           return;
         case "end":
-          onEndedRef.current?.();
+          onEndedRef.current?.("closed");
           return;
       }
     },
@@ -485,16 +486,33 @@ export function useRoomSession({
 
   /* --- Presence bookkeeping ---------------------------------------------- */
 
-  const heartbeat = api.room.heartbeat.useMutation();
+  const heartbeat = api.room.heartbeat.useMutation({
+    onSuccess: (result) => {
+      // The server refused the beat, so the room ran out its window while this
+      // device was asleep or off the network. Nothing else on this path would
+      // ever notice: the wire is quiet and the poll only carries state.
+      if (!result.live) onEndedRef.current?.("expired");
+    },
+  });
   const heartbeatRef = useRef(heartbeat.mutate);
   heartbeatRef.current = heartbeat.mutate;
 
+  /**
+   * A joined device counts as activity for as long as it is mounted, hidden
+   * tab or not - it is in the room, not watching it. But a suspended tab stops
+   * its timers, so the first thing a returning device has to do is say it is
+   * still here rather than wait out the rest of the interval.
+   */
   useEffect(() => {
     const beat = () =>
       heartbeatRef.current({ roomId: room.id, deviceKey: device.deviceKey });
     beat();
     const id = window.setInterval(beat, 45_000);
-    return () => window.clearInterval(id);
+    document.addEventListener("visibilitychange", beat);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", beat);
+    };
   }, [device.deviceKey, room.id]);
 
   /* --- Public surface ---------------------------------------------------- */

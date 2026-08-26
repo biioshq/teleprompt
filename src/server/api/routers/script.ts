@@ -19,6 +19,7 @@ import {
   requireScript,
   viewerFor,
 } from "~/server/library/access";
+import { stillLive } from "~/server/rooms/lifetime";
 
 type Db = typeof database;
 type Script = typeof scripts.$inferSelect;
@@ -61,6 +62,10 @@ That is the whole product. Write, connect, present.
  * index is not perfect - inserting a paragraph above where someone is reading
  * shifts them by one - but it is far better than throwing them back to the top
  * of the script because a typo was fixed further down.
+ *
+ * Note this counts as activity on the room: pushing an edit in refreshes the
+ * five-minute window, so a script being worked on in one tab keeps its room
+ * alive in another.
  */
 async function syncLiveRooms(db: Db, script: Script) {
   // Every live room showing this script, whoever opened it. A script can now
@@ -69,7 +74,7 @@ async function syncLiveRooms(db: Db, script: Script) {
   // against two different texts — which is the failure this whole mechanism
   // exists to prevent, regardless of whose account the room is on.
   const live = await db.query.rooms.findMany({
-    where: and(eq(rooms.scriptId, script.id), eq(rooms.status, "live")),
+    where: and(eq(rooms.scriptId, script.id), stillLive()),
   });
   if (live.length === 0) return;
 
@@ -100,7 +105,9 @@ async function syncLiveRooms(db: Db, script: Script) {
         },
         lastActiveAt: new Date(),
       })
-      .where(eq(rooms.id, room.id));
+      // Guarded as well as the read above: the loop is sequential, so a room
+      // that was live when it was selected can run out before its turn.
+      .where(and(eq(rooms.id, room.id), stillLive()));
   }
 }
 
