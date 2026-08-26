@@ -141,7 +141,7 @@ export function LibraryBoard({ folderId }: { folderId: string | null }) {
     },
     onError: (_error, _input, context) => restoreBoard(context),
     // The scripts that were inside come back to the top level, and only the
-    // server knows which those are, so this one really does need the refetch,
+    // server knows which those are, so this one really does need the refetch;
     // it just no longer has to happen before the folder disappears.
     onSettled: refresh,
   });
