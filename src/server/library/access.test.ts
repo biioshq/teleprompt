@@ -5,6 +5,7 @@ import {
   allows,
   ancestorChain,
   depthOf,
+  groupByFolder,
   resolveFolderAccess,
   resolveScriptAccess,
   subtreeHeight,
@@ -281,9 +282,83 @@ describe("tree arithmetic", () => {
   });
 });
 
+describe("why something is reachable", () => {
+  /**
+   * The share dialog has to name the folder a grant came from, not just say
+   * that one exists. A person looking at a script they never shared wants the
+   * folder they did share, and offering them the wrong one sends them off to
+   * revoke something that was not the reason.
+   */
+  const chain = () => ancestorChain(tree(), "acme");
+
+  const share = (id: string, folderId: string | null, email: string) => ({
+    id,
+    folderId,
+    email,
+  });
+
+  it("names every folder above that carries a grant, nearest first", () => {
+    const grouped = groupByFolder(chain(), [
+      share("s1", "work", "bob@example.com"),
+      share("s2", "acme", "cleo@example.com"),
+    ]);
+
+    assert.deepEqual(
+      grouped.map((step) => step.folder.id),
+      ["acme", "work"],
+    );
+  });
+
+  it("leaves out the folders nobody was given", () => {
+    const grouped = groupByFolder(chain(), [
+      share("s1", "clients", "bob@example.com"),
+    ]);
+
+    assert.deepEqual(
+      grouped.map((step) => step.folder.id),
+      ["clients"],
+    );
+  });
+
+  it("keeps each grant with the folder it was made on", () => {
+    const grouped = groupByFolder(chain(), [
+      share("s1", "work", "bob@example.com"),
+      share("s2", "work", "cleo@example.com"),
+      share("s3", "acme", "dana@example.com"),
+    ]);
+
+    assert.deepEqual(
+      grouped.map((step) => [
+        step.folder.id,
+        step.rows.map((row) => row.email),
+      ]),
+      [
+        ["acme", ["dana@example.com"]],
+        ["work", ["bob@example.com", "cleo@example.com"]],
+      ],
+    );
+  });
+
+  it("ignores a grant on a folder that is not above this one", () => {
+    assert.deepEqual(
+      groupByFolder(chain(), [share("s1", "personal", "bob@example.com")]),
+      [],
+    );
+  });
+
+  it("has nothing to say about something at the top level", () => {
+    assert.deepEqual(
+      groupByFolder(ancestorChain(tree(), null), [
+        share("s1", "work", "bob@example.com"),
+      ]),
+      [],
+    );
+  });
+});
+
 describe("a cycle", () => {
   /**
-   * A cycle should be impossible — `folder.move` refuses to create one. This
+   * A cycle should be impossible: `folder.move` refuses to create one. This
    * is here because the consequence of being wrong about that is not a wrong
    * answer but a request that never returns, and a hung request is the one
    * failure this code is not allowed to have.

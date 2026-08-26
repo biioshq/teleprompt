@@ -1,15 +1,16 @@
 import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
-// Type-only: naming the client's type must not drag the client itself — and
-// its connection pool, and its environment validation — into every module that
+// Type-only: naming the client's type must not drag the client itself (and its
+// connection pool, and its environment validation) into every module that
 // mentions a query.
 import type { db as database } from "~/server/db";
 import { folders, scripts, shares, users } from "~/server/db/schema";
-import type { Folder, Script } from "~/server/db/schema";
+import type { Folder, Script, Share } from "~/server/db/schema";
 import {
   allows,
   ancestorChain,
+  groupByFolder,
   normaliseEmail,
   resolveFolderAccess,
   resolveScriptAccess,
@@ -28,6 +29,7 @@ export {
   allows,
   ancestorChain,
   childrenMap,
+  groupByFolder,
   depthOf,
   normaliseEmail,
   resolveFolderAccess,
@@ -194,6 +196,50 @@ export async function requireFolder(
 }
 
 /* -------------------------------------------------------------------------- */
+/* Grants made further up                                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The grants sitting on the folders above something, nearest folder first.
+ *
+ * A grant on a folder reaches everything filed under it, however deep, and
+ * from the thing itself that is invisible: a script's own share list can be
+ * empty while three people are reading it. Anything that answers "who can see
+ * this" has to ask this question too, so it is asked in one place.
+ *
+ * `parentFolderId` is the folder the thing sits *in*: a script's `folderId`,
+ * a folder's `parentId`, or the folder itself when the question is about its
+ * children. Pass `map` when the owner's tree is already loaded.
+ */
+export async function inheritedShares(
+  db: Db,
+  ownerId: string,
+  parentFolderId: string | null,
+  map?: FolderMap,
+): Promise<Array<{ folder: Folder; rows: Share[] }>> {
+  if (!parentFolderId) return [];
+
+  const chain = ancestorChain(
+    map ?? (await loadFolders(db, [ownerId])),
+    parentFolderId,
+  );
+  if (chain.length === 0) return [];
+
+  const rows = await db.query.shares.findMany({
+    where: and(
+      eq(shares.ownerId, ownerId),
+      inArray(
+        shares.folderId,
+        chain.map((folder) => folder.id),
+      ),
+    ),
+    orderBy: [shares.email],
+  });
+
+  return groupByFolder(chain, rows);
+}
+
+/* -------------------------------------------------------------------------- */
 /* Listing                                                                    */
 /* -------------------------------------------------------------------------- */
 
@@ -209,31 +255,52 @@ export type LibraryEntry = {
 };
 
 /**
- * How many grants exist on each of a set of things.
+ * How many people can see each of a set of things.
  *
  * Shown on the card, because "who can see this" is the question sharing
  * creates and the worst answer is having to open each one to find out.
+ *
+ * People, not grants: an address reached both directly and through a folder
+ * above is one person, and counting the rows would say two. `inherited` is
+ * every address a grant further up already reaches, which is the same set for
+ * everything in one folder; they are all the same distance below it.
  */
 async function shareCounts(
   db: Db,
   folderIds: string[],
   scriptIds: string[],
+  inherited: ReadonlySet<string> = new Set(),
 ): Promise<Map<string, number>> {
-  const counts = new Map<string, number>();
-  if (folderIds.length === 0 && scriptIds.length === 0) return counts;
+  const ids = [...folderIds, ...scriptIds];
+  if (ids.length === 0) return new Map();
 
   const rows = await db.query.shares.findMany({
     where: or(
       folderIds.length > 0 ? inArray(shares.folderId, folderIds) : undefined,
       scriptIds.length > 0 ? inArray(shares.scriptId, scriptIds) : undefined,
     ),
-    columns: { folderId: true, scriptId: true },
+    columns: { folderId: true, scriptId: true, email: true },
   });
 
+  const direct = new Map<string, Set<string>>();
   for (const row of rows) {
     const key = row.folderId ?? row.scriptId;
     if (!key) continue;
-    counts.set(key, (counts.get(key) ?? 0) + 1);
+    const set = direct.get(key) ?? new Set<string>();
+    set.add(row.email);
+    direct.set(key, set);
+  }
+
+  const counts = new Map<string, number>();
+  for (const id of ids) {
+    const own = direct.get(id);
+    if (!own) {
+      counts.set(id, inherited.size);
+      continue;
+    }
+    let total = own.size;
+    for (const email of inherited) if (!own.has(email)) total += 1;
+    counts.set(id, total);
   }
   return counts;
 }
@@ -259,8 +326,6 @@ export async function browse(
   folders: Array<Folder & LibraryEntry>;
   scripts: Array<Script & LibraryEntry>;
 }> {
-  const grants = await grantsFor(db, viewer);
-
   if (folderId === null) {
     const [ownFolders, ownScripts] = await Promise.all([
       db.query.folders.findMany({
@@ -311,10 +376,16 @@ export async function browse(
     folderId,
     "viewer",
   );
-  const owner = await ownerOf(db, folder.ownerId);
-  const map = await loadFolders(db, [folder.ownerId]);
 
-  const [childFolders, childScripts] = await Promise.all([
+  // Everything below the gate is independent of everything else below it, so
+  // it goes in one round trip rather than five. `grantsFor` in particular used
+  // to run above this point, before the folder was even known to exist, and
+  // the account's own top level, which is the view this app opens on, never
+  // read the answer at all.
+  const [grants, owner, map, childFolders, childScripts] = await Promise.all([
+    grantsFor(db, viewer),
+    ownerOf(db, folder.ownerId),
+    loadFolders(db, [folder.ownerId]),
     db.query.folders.findMany({
       where: eq(folders.parentId, folder.id),
       orderBy: [folders.name],
@@ -342,11 +413,21 @@ export async function browse(
   }
 
   const mine = folder.ownerId === viewer.id;
+  // Everything in this folder inherits every grant made on it or on anything
+  // above it, so those addresses belong in each child's tally as well.
+  const reachedFromAbove = mine
+    ? new Set(
+        (await inheritedShares(db, folder.ownerId, folder.id, map)).flatMap(
+          (step) => step.rows.map((row) => row.email),
+        ),
+      )
+    : new Set<string>();
   const counts = mine
     ? await shareCounts(
         db,
         childFolders.map((row) => row.id),
         childScripts.map((row) => row.id),
+        reachedFromAbove,
       )
     : new Map<string, number>();
 

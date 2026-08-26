@@ -3,8 +3,8 @@
  *
  * Nothing in this file fetches anything. That is the point: "who may do what"
  * is a set of statements about ownership and inheritance, and keeping it free
- * of queries means it can be read as those statements and tested as them —
- * see `access.test.ts`. `access.ts` does the loading and calls in here for the
+ * of queries means it can be read as those statements and tested as them; see
+ * `access.test.ts`. `access.ts` does the loading and calls in here for the
  * answer.
  */
 
@@ -20,7 +20,7 @@ export function allows(access: Access | null, minimum: Access): boolean {
 
 /** The stronger of two grants. Sharing a folder *and* a script inside it is a
  *  perfectly normal thing to do, and the more generous grant is what was
- *  meant — a person given editing rights on one script does not lose them
+ *  meant: a person given editing rights on one script does not lose them
  *  because the folder around it was later shared read-only with a group. */
 export function stronger(a: Access | null, b: Access | null): Access | null {
   if (!a) return b;
@@ -185,6 +185,30 @@ export function keepStronger(
   if (!current || RANK[candidate.role] > RANK[current.role]) {
     into.set(key, candidate);
   }
+}
+
+/**
+ * Grants laid back over the folders they were made on, nearest folder first.
+ *
+ * Folders with nothing on them drop out, so what is left is exactly the list
+ * of reasons something is reachable, in the order a person would read them:
+ * the nearest folder is the one they most likely have in mind.
+ */
+export function groupByFolder<T extends { folderId: string | null }>(
+  chain: Folder[],
+  rows: T[],
+): Array<{ folder: Folder; rows: T[] }> {
+  const byFolder = new Map<string, T[]>();
+  for (const row of rows) {
+    if (!row.folderId) continue;
+    const list = byFolder.get(row.folderId) ?? [];
+    list.push(row);
+    byFolder.set(row.folderId, list);
+  }
+
+  return chain
+    .filter((folder) => byFolder.has(folder.id))
+    .map((folder) => ({ folder, rows: byFolder.get(folder.id)! }));
 }
 
 /**

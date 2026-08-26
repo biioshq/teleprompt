@@ -5,10 +5,10 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { SHARE_ROLES, shares, users } from "~/server/db/schema";
 import {
+  inheritedShares,
   normaliseEmail,
   requireFolder,
   requireScript,
-  viewerFor,
 } from "~/server/library/access";
 
 /**
@@ -18,7 +18,7 @@ import {
  * gets to see them is a different kind of authority, and conflating the two is
  * how a document quietly ends up somewhere its author never put it.
  *
- * Nothing here sends email. Teleprompt has no mail provider, by choice — one
+ * Nothing here sends email. Teleprompt has no mail provider, by choice: one
  * more service, one more set of credentials, one more thing to configure
  * before a self-hosted copy works. A grant is simply waiting the next time
  * that person signs in, and the dialog says so rather than implying an
@@ -45,7 +45,7 @@ const roleInput = z.enum(SHARE_ROLES);
  *
  * A stricter pattern rejects addresses that are perfectly valid, and the cost
  * of a typo here is a grant that never matches anybody rather than anything
- * reaching the wrong person — an address only ever grants access to the
+ * reaching the wrong person: an address only ever grants access to the
  * account that has already proved, to a provider, that it owns it.
  */
 const emailInput = z
@@ -58,27 +58,44 @@ const emailInput = z
   });
 
 export const shareRouter = createTRPCRouter({
-  /** Who this is shared with. Owner only — the list is itself information. */
+  /**
+   * Who this is shared with. Owner only: the list is itself information.
+   *
+   * Two lists, because there are two different answers. `direct` is what was
+   * granted on this exact thing. `inherited` is everyone a folder above it
+   * already reaches, grouped by the folder that is the reason. A list that
+   * shows only the first is not a list of who can see this, and the gap is
+   * invisible from here: a script's own list reads empty while a folder three
+   * levels up is handing it to a group.
+   *
+   * Each inherited row keeps its own share id, so the grant can be given back
+   * from the place the surprise happened rather than only from the folder.
+   */
   list: protectedProcedure.input(targetInput).query(async ({ ctx, input }) => {
-    const viewer = await viewerFor(ctx.db, ctx.session.user.id);
-    await requireTargetOwner(ctx.db, viewer, input);
+    const viewer = ctx.viewer;
+    const parentFolderId = await requireTargetOwner(ctx.db, viewer, input);
 
-    const rows = await ctx.db.query.shares.findMany({
-      where: input.scriptId
-        ? eq(shares.scriptId, input.scriptId)
-        : eq(shares.folderId, input.folderId!),
-      orderBy: [shares.email],
-    });
+    const [rows, above] = await Promise.all([
+      ctx.db.query.shares.findMany({
+        where: input.scriptId
+          ? eq(shares.scriptId, input.scriptId)
+          : eq(shares.folderId, input.folderId!),
+        orderBy: [shares.email],
+      }),
+      inheritedShares(ctx.db, viewer.id, parentFolderId),
+    ]);
+
+    const inheritedRows = above.flatMap((step) => step.rows);
+    const emails = [
+      ...new Set([...rows, ...inheritedRows].map((row) => row.email)),
+    ];
 
     // Whether the address has ever signed in is worth showing: it is the
     // difference between "they have not looked yet" and "they cannot find it".
     const accounts =
-      rows.length > 0
+      emails.length > 0
         ? await ctx.db.query.users.findMany({
-            where: inArray(
-              users.email,
-              rows.map((row) => row.email),
-            ),
+            where: inArray(users.email, emails),
             columns: { name: true, email: true, image: true },
           })
         : [];
@@ -86,7 +103,7 @@ export const shareRouter = createTRPCRouter({
       accounts.map((account) => [normaliseEmail(account.email), account]),
     );
 
-    return rows.map((row) => {
+    const person = (row: (typeof rows)[number]) => {
       const account = byEmail.get(row.email);
       return {
         id: row.id,
@@ -97,7 +114,37 @@ export const shareRouter = createTRPCRouter({
         image: account?.image ?? null,
         hasAccount: Boolean(account),
       };
-    });
+    };
+
+    // Each side names the other. Taking away one of somebody's two grants
+    // leaves them exactly where they were, and the only thing worse than not
+    // knowing who can see something is believing you have just fixed it.
+    const directEmails = new Set(rows.map((row) => row.email));
+    const alsoAbove = new Map<string, string[]>();
+    for (const step of above) {
+      for (const row of step.rows) {
+        alsoAbove.set(row.email, [
+          ...(alsoAbove.get(row.email) ?? []),
+          step.folder.name,
+        ]);
+      }
+    }
+
+    return {
+      direct: rows.map((row) => ({
+        ...person(row),
+        /** Folders above that reach this person anyway. */
+        via: alsoAbove.get(row.email) ?? [],
+      })),
+      inherited: above.map((step) => ({
+        folderId: step.folder.id,
+        folderName: step.folder.name,
+        people: step.rows.map((row) => ({
+          ...person(row),
+          alsoDirect: directEmails.has(row.email),
+        })),
+      })),
+    };
   }),
 
   /** Add someone, or change the level they already have. */
@@ -109,7 +156,7 @@ export const shareRouter = createTRPCRouter({
       ),
     )
     .mutation(async ({ ctx, input }) => {
-      const viewer = await viewerFor(ctx.db, ctx.session.user.id);
+      const viewer = ctx.viewer;
       await requireTargetOwner(ctx.db, viewer, input);
 
       const email = normaliseEmail(input.email);
@@ -146,7 +193,7 @@ export const shareRouter = createTRPCRouter({
   setRole: protectedProcedure
     .input(z.object({ id: z.string().uuid(), role: roleInput }))
     .mutation(async ({ ctx, input }) => {
-      const viewer = await viewerFor(ctx.db, ctx.session.user.id);
+      const viewer = ctx.viewer;
       const existing = await ctx.db.query.shares.findFirst({
         where: and(eq(shares.id, input.id), eq(shares.ownerId, viewer.id)),
       });
@@ -164,7 +211,7 @@ export const shareRouter = createTRPCRouter({
   revoke: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      const viewer = await viewerFor(ctx.db, ctx.session.user.id);
+      const viewer = ctx.viewer;
       const deleted = await ctx.db
         .delete(shares)
         .where(and(eq(shares.id, input.id), eq(shares.ownerId, viewer.id)))
@@ -186,7 +233,7 @@ export const shareRouter = createTRPCRouter({
   leave: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      const viewer = await viewerFor(ctx.db, ctx.session.user.id);
+      const viewer = ctx.viewer;
       const deleted = await ctx.db
         .delete(shares)
         .where(and(eq(shares.id, input.id), eq(shares.email, viewer.email)))
@@ -198,14 +245,21 @@ export const shareRouter = createTRPCRouter({
     }),
 });
 
+/** Returns the folder the target sits in, whose ancestors also reach it. */
 async function requireTargetOwner(
   db: Parameters<typeof requireScript>[0],
   viewer: Parameters<typeof requireScript>[1],
   target: Target,
-) {
+): Promise<string | null> {
   if (target.scriptId) {
-    await requireScript(db, viewer, target.scriptId, "owner");
-  } else {
-    await requireFolder(db, viewer, target.folderId!, "owner");
+    const { script } = await requireScript(
+      db,
+      viewer,
+      target.scriptId,
+      "owner",
+    );
+    return script.folderId;
   }
+  const { folder } = await requireFolder(db, viewer, target.folderId!, "owner");
+  return folder.parentId;
 }
