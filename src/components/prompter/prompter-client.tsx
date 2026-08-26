@@ -18,8 +18,10 @@ import {
 import { ProgressReadout } from "~/components/prompter/progress";
 import {
   ExitLink,
+  RoomClosed,
   StageLoading,
   StageMessage,
+  type ClosedReason,
 } from "~/components/prompter/room-status";
 import { ScriptCanvas } from "~/components/prompter/script-canvas";
 import { useRoomBootstrap } from "~/components/prompter/use-room-bootstrap";
@@ -48,10 +50,23 @@ const CHROME_IDLE_MS = 2600;
 const TAP_SLOP_PX = 8;
 
 export function PrompterClient({ roomId }: { roomId: string }) {
-  const { room, isLoading, error, refetch, slow } = useRoomBootstrap(
+  const { room, ended, isLoading, error, refetch, slow } = useRoomBootstrap(
     roomId,
     "prompter",
   );
+
+  /**
+   * Held here rather than inside the stage on purpose. A room that is over has
+   * to take the stage down with it — the engine, the realtime link, the
+   * microphone, the wake lock and the heartbeat all live below this line, and
+   * a message painted over the top of them would leave every one of them
+   * running against a room that no longer exists.
+   */
+  const [closed, setClosed] = useState<ClosedReason | null>(null);
+  const reason = closed ?? (ended ? "unknown" : null);
+  if (reason) {
+    return <RoomClosed reason={reason} />;
+  }
 
   if (isLoading && !room) {
     return (
@@ -78,7 +93,13 @@ export function PrompterClient({ roomId }: { roomId: string }) {
     );
   }
 
-  return <PrompterStage room={room} onReload={() => void refetch()} />;
+  return (
+    <PrompterStage
+      room={room}
+      onReload={() => void refetch()}
+      onEnded={setClosed}
+    />
+  );
 }
 
 type Room = NonNullable<ReturnType<typeof useRoomBootstrap>["room"]>;
@@ -86,9 +107,11 @@ type Room = NonNullable<ReturnType<typeof useRoomBootstrap>["room"]>;
 function PrompterStage({
   room,
   onReload,
+  onEnded,
 }: {
   room: Room;
   onReload: () => void;
+  onEnded: (reason: ClosedReason) => void;
 }) {
   const [voicePrefs, setVoiceLanguage] = useVoicePreferences();
   const speech = useSpeechSupport();
@@ -104,6 +127,7 @@ function PrompterStage({
     room,
     role: "prompter",
     onReload,
+    onEnded,
     allowVoice: canListen,
     /**
      * Always, rather than only while listening. Arming the microphone mid-take

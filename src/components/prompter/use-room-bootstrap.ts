@@ -40,7 +40,9 @@ export function useRoomBootstrap(roomId: string, role: Role) {
   const announced = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!query.data) return;
+    // Nothing to join. `join` would reject it anyway; not asking keeps the
+    // error surface for rooms that ended between the load and the attempt.
+    if (!query.data || query.data.status !== "live") return;
     const key = `${roomId}:${role}`;
     if (announced.current === key) return;
     announced.current = key;
@@ -57,8 +59,19 @@ export function useRoomBootstrap(roomId: string, role: Role) {
     });
   }, [query.data, roomId, role]);
 
+  // Two ways to learn the same thing. The room can already be over when it
+  // loads, or it can go over in the moment between loading and joining - and
+  // `join` is the only call that rejects that, so until now its rejection went
+  // nowhere and the session mounted as though it had joined.
+  const ended =
+    query.data?.status === "ended" ||
+    join.error?.data?.code === "PRECONDITION_FAILED";
+
   return {
-    room: query.data,
+    // A room the server has already closed is not one a device can mount
+    // against, and the caller renders the closed screen instead.
+    room: ended ? undefined : query.data,
+    ended,
     isLoading: query.isLoading,
     error: query.error,
     refetch: query.refetch,

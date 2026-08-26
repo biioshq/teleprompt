@@ -36,15 +36,18 @@ export default function Page() {
       <p>Three causes, in order of likelihood:</p>
       <ul>
         <li>
+          <strong>The room ended.</strong> Rooms close after five quiet minutes
+          — nothing attached to them, and the room page neither open nor in
+          front of you — and release their code. Open a new session from the
+          script. Leaving the room page up and visible while you fetch the other
+          device is what keeps this from happening.
+        </li>
+        <li>
           <strong>Different accounts.</strong> The second device is signed in as
           someone else. A personal account on the phone and a work account on
           the laptop is the classic version. Rooms are scoped to an account, so
           the lookup genuinely finds nothing. Check the avatar in the header on
           both.
-        </li>
-        <li>
-          <strong>The room ended.</strong> Rooms close after twelve quiet hours
-          and release their code. Open a new session from the script.
         </li>
         <li>
           <strong>A mistyped character.</strong> The alphabet excludes lookalike

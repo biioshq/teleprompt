@@ -15,7 +15,7 @@ export default function NotFound() {
         <h1 className="mt-4 text-3xl">This page is not in the script</h1>
         <p className="mt-4 text-[0.9375rem] leading-relaxed text-muted">
           The link may be old, or the room it pointed at may have ended. Rooms
-          close themselves after twelve quiet hours.
+          close themselves after five quiet minutes.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <ButtonLink href="/app" variant="primary">

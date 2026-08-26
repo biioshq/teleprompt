@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -45,6 +45,36 @@ export function RoomLobby({ roomId }: { roomId: string }) {
     },
   });
 
+  /**
+   * This page is the one screen where a person deliberately waits — for the
+   * second device, or for someone to walk in with it. A five-minute window
+   * would close the room while they were looking straight at it, so looking
+   * counts as activity.
+   *
+   * A hidden tab does not, and that is the whole distinction: a room nobody is
+   * watching and nothing is attached to is over. The beat deliberately carries
+   * no device key: this page is a person looking at a join code, not a device
+   * in the room, and saying otherwise would keep whatever row this browser
+   * left behind last time reading as present.
+   */
+  const heartbeat = api.room.heartbeat.useMutation();
+  const heartbeatRef = useRef(heartbeat.mutate);
+  heartbeatRef.current = heartbeat.mutate;
+
+  useEffect(() => {
+    const beat = () => {
+      if (document.visibilityState !== "visible") return;
+      heartbeatRef.current({ roomId });
+    };
+    beat();
+    const id = window.setInterval(beat, 45_000);
+    document.addEventListener("visibilitychange", beat);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", beat);
+    };
+  }, [roomId]);
+
   if (room.isLoading) {
     return (
       <main className="mx-auto max-w-4xl py-16 gutter">
@@ -68,6 +98,7 @@ export function RoomLobby({ roomId }: { roomId: string }) {
   }
 
   const data = room.data;
+  const live = data.status === "live";
   const stale = script.data ? script.data.body !== data.content : false;
   const seconds = readingTimeSeconds(data.wordCount, data.state.speedWpm);
 
@@ -106,101 +137,129 @@ export function RoomLobby({ roomId }: { roomId: string }) {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => void copyCode()}
-          className="group rounded-sm border border-ink bg-surface px-6 py-4 text-left shadow-hard transition-all hover:-translate-x-px hover:-translate-y-px hover:shadow-hard-lg"
-        >
-          <span className="block font-mono text-[0.625rem] tracking-[0.16em] text-muted uppercase">
-            Join code
-          </span>
-          <span className="mt-1 flex items-center gap-3 font-mono text-2xl tracking-[0.18em] text-ink">
-            {data.code}
-            {copied ? (
-              <Check size={16} weight="bold" className="text-jade" />
-            ) : (
-              <Copy
-                size={16}
-                weight="bold"
-                className="text-faint transition-colors group-hover:text-ink"
-              />
-            )}
-          </span>
-        </button>
-      </div>
-
-      {/* Roles ------------------------------------------------------------ */}
-      <div className="mt-10 grid gap-4 sm:grid-cols-2">
-        <Link
-          href={`/prompter/${data.id}`}
-          className="group rounded-sm border border-line bg-surface p-6 transition-colors hover:border-ink"
-        >
-          <Monitor size={22} weight="bold" className="text-brand" />
-          <h2 className="mt-4 text-lg">Use this device as the display</h2>
-          <p className="mt-2 text-[0.875rem] leading-relaxed text-muted">
-            Full screen, mirrored if you are shooting through glass. Point it at
-            yourself and leave it alone.
-          </p>
-          <span className="mt-4 inline-block text-sm text-ink underline decoration-brand decoration-2 underline-offset-4">
-            Open the display
-          </span>
-        </Link>
-
-        <Link
-          href={`/remote/${data.id}`}
-          className="group rounded-sm border border-line bg-surface p-6 transition-colors hover:border-ink"
-        >
-          <DeviceMobile size={22} weight="bold" className="text-brand" />
-          <h2 className="mt-4 text-lg">Use this device as the remote</h2>
-          <p className="mt-2 text-[0.875rem] leading-relaxed text-muted">
-            The same words in your hand, with play, pace and tap-to-jump. This
-            is the device you keep.
-          </p>
-          <span className="mt-4 inline-block text-sm text-ink underline decoration-brand decoration-2 underline-offset-4">
-            Open the remote
-          </span>
-        </Link>
-      </div>
-
-      {/* Pairing instructions --------------------------------------------- */}
-      <section className="mt-6 rounded-sm border border-line bg-paper-deep p-6">
-        <h2 className="text-base font-semibold">On the other device</h2>
-        <ol className="mt-4 space-y-2.5 text-[0.875rem] leading-relaxed text-muted">
-          <li>
-            <span className="font-medium text-ink">1.</span> Open{" "}
-            <span className="font-mono text-ink">teleprompt</span> and sign in
-            to the same account.
-          </li>
-          <li>
-            <span className="font-medium text-ink">2.</span> Go to{" "}
-            <Link
-              href="/join"
-              className="text-ink underline decoration-brand decoration-2 underline-offset-2"
-            >
-              Join a room
-            </Link>{" "}
-            and enter{" "}
-            <span className="font-mono tracking-[0.16em] text-ink">
-              {data.code}
+        {live ? (
+          <button
+            type="button"
+            onClick={() => void copyCode()}
+            className="group rounded-sm border border-ink bg-surface px-6 py-4 text-left shadow-hard transition-all hover:-translate-x-px hover:-translate-y-px hover:shadow-hard-lg"
+          >
+            <span className="block font-mono text-[0.625rem] tracking-[0.16em] text-muted uppercase">
+              Join code
             </span>
-            .
-          </li>
-          <li>
-            <span className="font-medium text-ink">3.</span> Pick the role that
-            device should play. The two find each other on their own.
-          </li>
-        </ol>
-        <div className="mt-5">
-          <InstallPrompt />
-        </div>
-      </section>
+            <span className="mt-1 flex items-center gap-3 font-mono text-2xl tracking-[0.18em] text-ink">
+              {data.code}
+              {copied ? (
+                <Check size={16} weight="bold" className="text-jade" />
+              ) : (
+                <Copy
+                  size={16}
+                  weight="bold"
+                  className="text-faint transition-colors group-hover:text-ink"
+                />
+              )}
+            </span>
+          </button>
+        ) : null}
+      </div>
+
+      {/*
+        A closed room keeps its page — the words, the devices that were on it —
+        but not the parts that invite someone in. Offering a join code that no
+        longer resolves is worse than offering nothing.
+      */}
+      {live ? (
+        <>
+          {/* Roles -------------------------------------------------------- */}
+          <div className="mt-10 grid gap-4 sm:grid-cols-2">
+            <Link
+              href={`/prompter/${data.id}`}
+              className="group rounded-sm border border-line bg-surface p-6 transition-colors hover:border-ink"
+            >
+              <Monitor size={22} weight="bold" className="text-brand" />
+              <h2 className="mt-4 text-lg">Use this device as the display</h2>
+              <p className="mt-2 text-[0.875rem] leading-relaxed text-muted">
+                Full screen, mirrored if you are shooting through glass. Point
+                it at yourself and leave it alone.
+              </p>
+              <span className="mt-4 inline-block text-sm text-ink underline decoration-brand decoration-2 underline-offset-4">
+                Open the display
+              </span>
+            </Link>
+
+            <Link
+              href={`/remote/${data.id}`}
+              className="group rounded-sm border border-line bg-surface p-6 transition-colors hover:border-ink"
+            >
+              <DeviceMobile size={22} weight="bold" className="text-brand" />
+              <h2 className="mt-4 text-lg">Use this device as the remote</h2>
+              <p className="mt-2 text-[0.875rem] leading-relaxed text-muted">
+                The same words in your hand, with play, pace and tap-to-jump.
+                This is the device you keep.
+              </p>
+              <span className="mt-4 inline-block text-sm text-ink underline decoration-brand decoration-2 underline-offset-4">
+                Open the remote
+              </span>
+            </Link>
+          </div>
+
+          {/* Pairing instructions ----------------------------------------- */}
+          <section className="mt-6 rounded-sm border border-line bg-paper-deep p-6">
+            <h2 className="text-base font-semibold">On the other device</h2>
+            <ol className="mt-4 space-y-2.5 text-[0.875rem] leading-relaxed text-muted">
+              <li>
+                <span className="font-medium text-ink">1.</span> Open{" "}
+                <span className="font-mono text-ink">teleprompt</span> and sign
+                in to the same account.
+              </li>
+              <li>
+                <span className="font-medium text-ink">2.</span> Go to{" "}
+                <Link
+                  href="/join"
+                  className="text-ink underline decoration-brand decoration-2 underline-offset-2"
+                >
+                  Join a room
+                </Link>{" "}
+                and enter{" "}
+                <span className="font-mono tracking-[0.16em] text-ink">
+                  {data.code}
+                </span>
+                .
+              </li>
+              <li>
+                <span className="font-medium text-ink">3.</span> Pick the role
+                that device should play. The two find each other on their own.
+              </li>
+            </ol>
+            <div className="mt-5">
+              <InstallPrompt />
+            </div>
+          </section>
+        </>
+      ) : (
+        <section className="mt-10 rounded-sm border border-line bg-paper-deep p-6">
+          <h2 className="text-base font-semibold">This room has closed</h2>
+          <p className="mt-2 text-[0.875rem] leading-relaxed text-muted">
+            {data.closedReason === "closed"
+              ? "Somebody ended it. Its join code has gone back into circulation, so open a new session from the script and you will get a fresh one."
+              : "It went five minutes with nothing on it and nobody on this page, so its join code has gone back into circulation. Open a new session from the script and you will get a fresh one."}
+          </p>
+          <ButtonLink
+            href={data.scriptId ? `/app/scripts/${data.scriptId}` : "/app"}
+            className="mt-5"
+          >
+            Back to the script
+          </ButtonLink>
+        </section>
+      )}
 
       {/* Devices ---------------------------------------------------------- */}
       <section className="mt-10">
         <h2 className="mb-3 eyebrow">Devices in this room</h2>
         {data.devices.length === 0 ? (
           <p className="text-[0.875rem] text-faint">
-            Nothing has joined yet. Open a role above to get started.
+            {live
+              ? "Nothing has joined yet. Open a role above to get started."
+              : "None — closing a room releases its device records."}
           </p>
         ) : (
           <ul className="divide-y divide-line rounded-sm border border-line bg-surface">
@@ -228,7 +287,7 @@ export function RoomLobby({ roomId }: { roomId: string }) {
 
       {/* Room actions ------------------------------------------------------ */}
       <section className="mt-10 flex flex-wrap items-center gap-3 border-t border-line pt-8">
-        {stale ? (
+        {live && stale ? (
           <div className="mr-auto flex w-full items-center gap-3 rounded-sm border border-brand bg-brand-soft px-4 py-3 sm:w-auto">
             <ArrowClockwise
               size={16}
@@ -250,19 +309,25 @@ export function RoomLobby({ roomId }: { roomId: string }) {
           </div>
         ) : (
           <p className="mr-auto text-[0.8125rem] text-faint">
-            Opened {relativeTime(new Date(data.createdAt))}. Rooms close
-            themselves after 12 quiet hours.
+            Opened {relativeTime(new Date(data.createdAt))}.{" "}
+            {live
+              ? "Rooms close themselves after 5 quiet minutes — this page counts, so it stays open while you are here."
+              : data.closedReason === "closed"
+                ? "It was ended deliberately."
+                : "It closed after 5 quiet minutes."}
           </p>
         )}
 
-        <Button
-          variant="danger"
-          size="sm"
-          onClick={() => end.mutate({ roomId: data.id })}
-          disabled={end.isPending}
-        >
-          {end.isPending ? "Ending…" : "End room"}
-        </Button>
+        {live ? (
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => end.mutate({ roomId: data.id })}
+            disabled={end.isPending}
+          >
+            {end.isPending ? "Ending…" : "End room"}
+          </Button>
+        ) : null}
       </section>
     </main>
   );

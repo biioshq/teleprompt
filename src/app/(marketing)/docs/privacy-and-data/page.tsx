@@ -223,8 +223,11 @@ export default function Page() {
           made while they had access is their own script and stays theirs.
         </li>
         <li>
-          Ending a room deletes its device records. The room row itself is
-          marked ended.
+          Ending a room deletes its device records, whether you end it yourself
+          or it closes after five quiet minutes — a room that closed on its own
+          releases them the next time the account opens a room or loads the
+          dashboard, and stops reporting them straight away. The room row itself
+          is marked ended.
         </li>
         <li>
           To delete an account and everything attached to it, email the address

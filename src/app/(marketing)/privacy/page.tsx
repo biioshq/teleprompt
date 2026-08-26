@@ -119,8 +119,8 @@ export default function PrivacyPage() {
         <h2 id="retention">How long</h2>
         <p>
           Scripts stay until you delete them or delete your account. Rooms close
-          themselves after twelve quiet hours and their device records are
-          removed at that point. Deleting your account removes everything
+          themselves after five quiet minutes, and their device records are
+          deleted when they do. Deleting your account removes everything
           attached to it — the schema cascades from the user record, so nothing
           is left orphaned.
         </p>
