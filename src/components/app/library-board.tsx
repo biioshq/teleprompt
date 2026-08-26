@@ -27,6 +27,7 @@ import { ShareDialog, type ShareTarget } from "~/components/app/share-dialog";
 import { InstallPrompt } from "~/components/pwa/install-prompt";
 import { Badge, LiveDot } from "~/components/ui/badge";
 import { Button, ButtonLink } from "~/components/ui/button";
+import { summarise } from "~/lib/markdown/blocks";
 import { formatDuration, readingTimeSeconds } from "~/lib/prompter/state";
 import { cn, pluralise, relativeTime } from "~/lib/utils";
 import { api } from "~/trpc/react";
@@ -357,8 +358,7 @@ export function LibraryBoard({ folderId }: { folderId: string | null }) {
                         · {formatDuration(seconds)} read
                       </p>
                       <p className="mt-4 line-clamp-3 text-[0.8125rem] leading-relaxed text-muted">
-                        {script.body.replace(/[#>*_`-]/g, " ").slice(0, 160) ||
-                          "Empty script"}
+                        {summarise(script.body) || "Empty script"}
                       </p>
                     </Link>
 

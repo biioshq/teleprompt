@@ -11,7 +11,7 @@
  * chunk ends and the next begins.
  */
 
-import { type DistributiveOmit } from "~/lib/types";
+import type { DistributiveOmit } from "~/lib/types";
 
 export type Block =
   | {
@@ -260,4 +260,136 @@ export function inferTitle(markdown: string, fallback = "Untitled script") {
     }
   }
   return fallback;
+}
+
+/**
+ * The opening of a script as plain prose, for a card with three lines to spend.
+ *
+ * A card is the one place a script is shown without being rendered, so every
+ * mark in it has to be resolved here rather than left to `react-markdown`.
+ * What used to do that was a character class — every #, >, *, _, backtick and
+ * hyphen swapped for a space — and it was wrong in both directions at once,
+ * cutting marks that were not there and leaving the ones that were. It took
+ * the hyphen out of
+ * "peer-to-peer" and the underscore out of `snake_case`; it left `[text](url)`
+ * carrying its brackets and its URL, and a table as a fence of pipes. Worst of
+ * all it left cues, because `::` was never in the class: a card could open with
+ * a director's note, which is exactly the text nobody is meant to read.
+ *
+ * So this runs the same splitter the prompter does. The blocks that are never
+ * spoken — cues, code, section breaks — are the blocks a summary leaves out,
+ * and the two agree by construction rather than by two lists of exceptions
+ * that somebody has to remember to keep in step.
+ */
+export function summarise(markdown: string, limit = 180): string {
+  const parts: string[] = [];
+  let length = 0;
+
+  for (const block of splitIntoBlocks(opening(markdown, limit))) {
+    if (
+      block.kind === "cue" ||
+      block.kind === "code" ||
+      block.kind === "rule"
+    ) {
+      continue;
+    }
+    const text = stripInline(
+      block.kind === "table" ? flattenTable(block.source) : block.source,
+    );
+    if (!text) continue;
+    parts.push(text);
+    // Plus the separator. Enough to fill the card is enough — the rest of a
+    // long script is work nobody sees.
+    length += text.length + 3;
+    if (length >= limit) break;
+  }
+
+  // A middot rather than a space: a heading runs straight into the paragraph
+  // under it otherwise, and three clamped lines have no room to explain that.
+  const summary = parts.join(" · ");
+  return summary.length > limit ? `${trimToWord(summary, limit)}…` : summary;
+}
+
+/**
+ * Enough of the source to fill `limit` readable characters even if most of it
+ * turns out to be markup — a script may be hundreds of kilobytes, and a card
+ * has no reason to split all of it. Cut on a line so the window never ends
+ * mid-word.
+ */
+function opening(markdown: string, limit: number): string {
+  const window = limit * 12;
+  if (markdown.length <= window) return markdown;
+  const cut = markdown.slice(0, window);
+  const lastBreak = cut.lastIndexOf("\n");
+  return lastBreak > 0 ? cut.slice(0, lastBreak) : cut;
+}
+
+/** The marks a backslash can make literal, per CommonMark. */
+const ESCAPED = /\\([\\`*_{}[\]()#+\-.!>~|])/g;
+
+/**
+ * Inline marks resolved down to the words somebody would actually say.
+ *
+ * Escapes are hidden first and put back last. A backslash is how somebody says
+ * "this asterisk is an asterisk", so unescaping before the mark rules run would
+ * hand them the very asterisks the escape was there to protect, and leaving
+ * them in place lets the emphasis rule read \*five\* as emphasis and eat both.
+ */
+function stripInline(source: string): string {
+  const literals: string[] = [];
+  const hidden = source.replace(ESCAPED, (_match, char: string) => {
+    literals.push(char);
+    return `\u0000${literals.length - 1}\u0000`;
+  });
+
+  return (
+    hidden
+      // Images say nothing out loud; a link keeps its text and loses its target.
+      .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+      .replace(/\[([^\]]*)\]\[[^\]]*\]/g, "$1")
+      .replace(/<(?:https?:\/\/|mailto:)([^>\s]+)>/g, "$1")
+      .replace(/<\/?[a-zA-Z][^>]*>/g, " ")
+      .replace(/`+([^`]*)`+/g, "$1")
+      .replace(/~~([\s\S]+?)~~/g, "$1")
+      .replace(/(\*{1,3})(\S(?:[\s\S]*?\S)?)\1/g, "$2")
+      // An underscore only marks emphasis between words. `snake_case` is a word,
+      // and the old character class used to spell it "snake case".
+      .replace(
+        /(^|[^\p{L}\p{N}])(_{1,3})(\S(?:[\s\S]*?\S)?)\2(?=$|[^\p{L}\p{N}])/gu,
+        "$1$3",
+      )
+      .replace(
+        /\u0000(\d+)\u0000/g,
+        (_match, at: string) => literals[Number(at)] ?? "",
+      )
+      .replace(/\s+/g, " ")
+      .trim()
+  );
+}
+
+/** A table read out as a line: cells in order, the alignment row dropped. */
+function flattenTable(source: string): string {
+  return source
+    .split("\n")
+    .filter((row) => !/^[\s|:-]*-[\s|:-]*$/.test(row))
+    .map((row) =>
+      row
+        .trim()
+        .replace(/^\||\|$/g, "")
+        .split("|")
+        .map((cell) => cell.trim())
+        .filter(Boolean)
+        .join(" "),
+    )
+    .filter(Boolean)
+    .join(" · ");
+}
+
+/** Cut at the last word that fits, and leave no dangling punctuation behind. */
+function trimToWord(text: string, limit: number): string {
+  const cut = text.slice(0, limit);
+  const space = cut.lastIndexOf(" ");
+  const kept = space > limit / 2 ? cut.slice(0, space) : cut;
+  return kept.replace(/[\s·,;:—–-]+$/, "");
 }
