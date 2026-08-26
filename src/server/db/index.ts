@@ -41,15 +41,56 @@ const isServerless = Boolean(
   process.env.VERCEL ?? process.env.AWS_LAMBDA_FUNCTION_NAME,
 );
 
+const max = isServerless ? 1 : env.NODE_ENV === "production" ? 10 : 4;
+
+/**
+ * How long an unused connection is kept.
+ *
+ * Opening one is not free: against a Supabase pooler it is a TCP connect, a
+ * TLS handshake and a pooler authentication, measured here at 170-230ms, where
+ * a query on an already-open connection costs 12-30ms. So a twenty-second idle
+ * timeout on a long-lived server means anyone who pauses to read something and
+ * then does one more thing pays an order of magnitude more for it than the
+ * query is worth, and it is paid again, per connection, the first time a
+ * request runs two queries at once.
+ *
+ * A serverless instance is a different situation and keeps the short timeout:
+ * it is frozen between invocations and cannot use an idle connection anyway,
+ * while every warm instance holding one multiplies against the pooler's client
+ * limit. That trade-off is the reason `max` is 1 there, and it has not changed.
+ */
+const idle_timeout = isServerless
+  ? 20
+  : env.NODE_ENV === "production"
+    ? 300
+    : 0;
+
 const conn =
   globalForDb.conn ??
   postgres(env.DATABASE_URL, {
     ssl: isLocal ? false : "require",
     prepare: !isTransactionPooler,
-    max: isServerless ? 1 : env.NODE_ENV === "production" ? 10 : 4,
-    idle_timeout: 20,
+    max,
+    idle_timeout,
     connect_timeout: 15,
   });
+
+/**
+ * Pay for the pool once, at startup, instead of inside the first few requests.
+ *
+ * Without this the pool opens lazily, so the first request pays one handshake
+ * and the first request that runs a `Promise.all` pays another - which makes
+ * parallelising queries look slower than doing them one at a time, exactly
+ * when the connection count is still climbing. Fire-and-forget, and failures
+ * are ignored on purpose: this is a warm-up, and a database that is not
+ * reachable yet should surface on a real query with a real error, not as an
+ * unhandled rejection at import time.
+ */
+if (!isServerless && !globalForDb.conn) {
+  void Promise.all(
+    Array.from({ length: max }, () => conn`select 1`.catch(() => undefined)),
+  );
+}
 
 if (env.NODE_ENV !== "production") globalForDb.conn = conn;
 

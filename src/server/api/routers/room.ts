@@ -15,12 +15,12 @@ import {
   normaliseJoinCode,
 } from "~/lib/utils";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-// Type-only: naming the client's type must not drag the client itself — and
-// its connection pool, and its environment validation — into every module that
+// Type-only: naming the client's type must not drag the client itself (and
+// its connection pool, and its environment validation) into every module that
 // mentions a query.
 import type { db as database } from "~/server/db";
 import { roomDevices, rooms, scripts } from "~/server/db/schema";
-import { requireScript, viewerFor } from "~/server/library/access";
+import { requireScript } from "~/server/library/access";
 import {
   expiredRatherThanEnded,
   isLive,
@@ -50,7 +50,7 @@ async function requireRoom(db: Db, id: string, ownerId: string) {
  *
  * `stillLive` is what makes the five minutes true; this is what stamps
  * `endedAt`, releases the device records, and lets the row stop pretending. It
- * runs whenever this account opens a room or loads a dashboard — late, but
+ * runs whenever this account opens a room or loads a dashboard: late, but
  * never wrong, because nothing reads a stale room as live in the meantime.
  */
 async function endStaleRooms(db: Db, ownerId: string) {
@@ -104,19 +104,20 @@ export const roomRouter = createTRPCRouter({
   create: protectedProcedure
     .input(z.object({ scriptId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      await endStaleRooms(ctx.db, ctx.session.user.id);
-
       // Being able to read a script is enough to present it. View-only means
-      // you may not change the words, not that you may not say them — and the
+      // you may not change the words, not that you may not say them. And the
       // room that opens is yours: your join code, your devices, your position
       // in the text. The owner's copy is untouched.
-      const viewer = await viewerFor(ctx.db, ctx.session.user.id);
-      const { script } = await requireScript(
-        ctx.db,
-        viewer,
-        input.scriptId,
-        "viewer",
-      );
+      //
+      // The sweep is housekeeping and decides nothing here: it only ever ends
+      // rooms already past their window, which is the same set every `stillLive`
+      // predicate below already excludes. So it runs alongside the permission
+      // check rather than delaying it: this is the "Present" button, and it is
+      // the one place in the app where waiting is most obvious.
+      const [, { script }] = await Promise.all([
+        endStaleRooms(ctx.db, ctx.session.user.id),
+        requireScript(ctx.db, ctx.viewer, input.scriptId, "viewer"),
+      ]);
 
       const code = await allocateJoinCode(ctx.db);
 
@@ -163,7 +164,7 @@ export const roomRouter = createTRPCRouter({
       return {
         ...room,
         // The room page has to render "Room ended", so the row comes back
-        // either way — but it must not claim to be live past the cutoff.
+        // either way, but it must not claim to be live past the cutoff.
         status: live ? ("live" as const) : ("ended" as const),
         // So the page can say what happened rather than assume the window ran
         // out on a room somebody closed deliberately.
@@ -197,7 +198,7 @@ export const roomRouter = createTRPCRouter({
         throw new TRPCError({
           code: "NOT_FOUND",
           message:
-            "No live room with that code on this account. Rooms close after five quiet minutes, so it may have run out — otherwise check the code, and check both devices are signed in as the same person.",
+            "No live room with that code on this account. Rooms close after five quiet minutes, so it may have run out; otherwise check the code, and check both devices are signed in as the same person.",
         });
       }
       return { id: room.id, title: room.title, code: room.code };
@@ -205,12 +206,18 @@ export const roomRouter = createTRPCRouter({
 
   /** Live rooms for the dashboard. */
   listLive: protectedProcedure.query(async ({ ctx }) => {
-    await endStaleRooms(ctx.db, ctx.session.user.id);
-    const live = await ctx.db.query.rooms.findMany({
-      where: and(eq(rooms.ownerId, ctx.session.user.id), stillLive()),
-      orderBy: [desc(rooms.lastActiveAt)],
-      limit: 20,
-    });
+    // The sweep and the listing touch disjoint rows by construction (one ends
+    // rooms last active before the cutoff, the other returns rooms last active
+    // after it), so waiting for the first before starting the second bought
+    // nothing but a round trip on every dashboard load.
+    const [, live] = await Promise.all([
+      endStaleRooms(ctx.db, ctx.session.user.id),
+      ctx.db.query.rooms.findMany({
+        where: and(eq(rooms.ownerId, ctx.session.user.id), stillLive()),
+        orderBy: [desc(rooms.lastActiveAt)],
+        limit: 20,
+      }),
+    ]);
     return live.map((room) => ({
       id: room.id,
       code: room.code,
@@ -332,7 +339,7 @@ export const roomRouter = createTRPCRouter({
    * Say the room is still in use.
    *
    * `deviceKey` is optional because the room page beats too, and it is not a
-   * device — it is a person looking at the join code. Passing no key keeps it
+   * device; it is a person looking at the join code. Passing no key keeps it
    * out of the device list rather than refreshing whatever row this browser
    * left behind the last time it took a role.
    */
@@ -435,7 +442,7 @@ export const roomRouter = createTRPCRouter({
       // Read access, not ownership: a room opened from a script somebody
       // shared has to be able to pull that script's later edits in, or it goes
       // stale the moment its author fixes a line.
-      const viewer = await viewerFor(ctx.db, ctx.session.user.id);
+      const viewer = ctx.viewer;
       const script = await requireScript(
         ctx.db,
         viewer,

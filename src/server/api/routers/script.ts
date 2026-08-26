@@ -9,16 +9,12 @@ import {
 } from "~/lib/markdown/blocks";
 import { parseState } from "~/lib/prompter/state";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-// Type-only: naming the client's type must not drag the client itself — and
-// its connection pool, and its environment validation — into every module that
+// Type-only: naming the client's type must not drag the client itself (and its
+// connection pool, and its environment validation) into every module that
 // mentions a query.
 import type { db as database } from "~/server/db";
 import { rooms, scripts } from "~/server/db/schema";
-import {
-  requireFolder,
-  requireScript,
-  viewerFor,
-} from "~/server/library/access";
+import { requireFolder, requireScript } from "~/server/library/access";
 import { stillLive } from "~/server/rooms/lifetime";
 
 type Db = typeof database;
@@ -36,7 +32,7 @@ phone. Both screens hold the same words, and the phone decides which words.
 ## What to try first
 
 - Press play on the remote and watch this screen move.
-- Slide the speed control — the pace follows you instantly.
+- Slide the speed control; the pace follows you instantly.
 - Tap a line on the remote to jump the display straight to it.
 
 Anything you can write in Markdown works here. Headings break a script into
@@ -71,7 +67,7 @@ async function syncLiveRooms(db: Db, script: Script) {
   // Every live room showing this script, whoever opened it. A script can now
   // be edited by somebody other than its owner and presented by somebody else
   // again, and a room that is one edit behind is a room syncing two devices
-  // against two different texts — which is the failure this whole mechanism
+  // against two different texts, which is the failure this whole mechanism
   // exists to prevent, regardless of whose account the room is on.
   const live = await db.query.rooms.findMany({
     where: and(eq(rooms.scriptId, script.id), stillLive()),
@@ -80,35 +76,44 @@ async function syncLiveRooms(db: Db, script: Script) {
 
   const blockCount = splitIntoBlocks(script.body).length;
   const lastBlock = Math.max(0, blockCount - 1);
+  const now = new Date();
 
-  for (const room of live) {
-    if (room.content === script.body && room.title === script.title) continue;
+  // Together rather than one after another. This runs inside every save of a
+  // script's body, and the editor autosaves, so a second room used to mean a
+  // second round trip added to every pause in typing, for rooms that cannot
+  // affect each other's outcome.
+  await Promise.all(
+    live.map((room) => {
+      if (room.content === script.body && room.title === script.title) return;
 
-    const current = parseState(room.state);
-    const blockIndex = Math.min(current.anchor.blockIndex, lastBlock);
-    const keptExactly = blockIndex === current.anchor.blockIndex;
+      const current = parseState(room.state);
+      const blockIndex = Math.min(current.anchor.blockIndex, lastBlock);
+      const keptExactly = blockIndex === current.anchor.blockIndex;
 
-    await db
-      .update(rooms)
-      .set({
-        title: script.title,
-        content: script.body,
-        contentRevision: sql`${rooms.contentRevision} + 1`,
-        state: {
-          ...current,
-          anchor: {
-            blockIndex,
-            blockFraction: keptExactly ? current.anchor.blockFraction : 0,
-          },
-          revision: current.revision + 1,
-          updatedAt: Date.now(),
-        },
-        lastActiveAt: new Date(),
-      })
-      // Guarded as well as the read above: the loop is sequential, so a room
-      // that was live when it was selected can run out before its turn.
-      .where(and(eq(rooms.id, room.id), stillLive()));
-  }
+      return (
+        db
+          .update(rooms)
+          .set({
+            title: script.title,
+            content: script.body,
+            contentRevision: sql`${rooms.contentRevision} + 1`,
+            state: {
+              ...current,
+              anchor: {
+                blockIndex,
+                blockFraction: keptExactly ? current.anchor.blockFraction : 0,
+              },
+              revision: current.revision + 1,
+              updatedAt: Date.now(),
+            },
+            lastActiveAt: now,
+          })
+          // Guarded as well as the read above: a room that was live when it was
+          // selected can run out before its update lands.
+          .where(and(eq(rooms.id, room.id), stillLive()))
+      );
+    }),
+  );
 }
 
 export const scriptRouter = createTRPCRouter({
@@ -122,7 +127,7 @@ export const scriptRouter = createTRPCRouter({
   }),
 
   byId: protectedProcedure.input(idInput).query(async ({ ctx, input }) => {
-    const viewer = await viewerFor(ctx.db, ctx.session.user.id);
+    const viewer = ctx.viewer;
     const { script, access } = await requireScript(
       ctx.db,
       viewer,
@@ -148,7 +153,7 @@ export const scriptRouter = createTRPCRouter({
         .optional(),
     )
     .mutation(async ({ ctx, input }) => {
-      const viewer = await viewerFor(ctx.db, ctx.session.user.id);
+      const viewer = ctx.viewer;
 
       // A script's folder always belongs to the script's owner. That is the
       // property that lets access to a folder imply access to what is listed
@@ -190,7 +195,7 @@ export const scriptRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const viewer = await viewerFor(ctx.db, ctx.session.user.id);
+      const viewer = ctx.viewer;
       const { script } = await requireScript(
         ctx.db,
         viewer,
@@ -236,7 +241,7 @@ export const scriptRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const viewer = await viewerFor(ctx.db, ctx.session.user.id);
+      const viewer = ctx.viewer;
       await requireScript(ctx.db, viewer, input.id, "owner");
       if (input.folderId) {
         await requireFolder(ctx.db, viewer, input.folderId, "owner");
@@ -261,7 +266,7 @@ export const scriptRouter = createTRPCRouter({
   duplicate: protectedProcedure
     .input(idInput)
     .mutation(async ({ ctx, input }) => {
-      const viewer = await viewerFor(ctx.db, ctx.session.user.id);
+      const viewer = ctx.viewer;
       const { script: source } = await requireScript(
         ctx.db,
         viewer,
@@ -285,7 +290,7 @@ export const scriptRouter = createTRPCRouter({
 
   /** Only an owner deletes. An editor's mistake should not be unrecoverable. */
   remove: protectedProcedure.input(idInput).mutation(async ({ ctx, input }) => {
-    const viewer = await viewerFor(ctx.db, ctx.session.user.id);
+    const viewer = ctx.viewer;
     await requireScript(ctx.db, viewer, input.id, "owner");
     await ctx.db.delete(scripts).where(eq(scripts.id, input.id));
     return { id: input.id };

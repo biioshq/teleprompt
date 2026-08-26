@@ -30,7 +30,7 @@ import { Button, ButtonLink } from "~/components/ui/button";
 import { summarise } from "~/lib/markdown/blocks";
 import { formatDuration, readingTimeSeconds } from "~/lib/prompter/state";
 import { cn, pluralise, relativeTime } from "~/lib/utils";
-import { api } from "~/trpc/react";
+import { api, type RouterOutputs } from "~/trpc/react";
 
 type Access = "owner" | "editor" | "viewer";
 
@@ -40,7 +40,7 @@ type Access = "owner" | "editor" | "viewer";
  * One folder at a time rather than a persistent tree in a sidebar: on a phone
  * a sidebar is a drawer nobody opens, and the breadcrumb carries the same
  * information in a line of text. Everything shared with you sits at the top
- * level, because that is where you look for it, and never anywhere else —
+ * level, because that is where you look for it, and never anywhere else:
  * a folder inside a shared folder is reached by opening the folder, not by
  * appearing twice.
  */
@@ -67,6 +67,44 @@ export function LibraryBoard({ folderId }: { folderId: string | null }) {
     void utils.script.list.invalidate();
   };
 
+  /**
+   * Change the board now, ask the server after.
+   *
+   * Renaming and deleting used to wait for two round trips before anything on
+   * screen moved: the mutation itself, and then the refetch its invalidation
+   * triggered. Neither is slow on its own, but they are serial and they sit
+   * between the click and the only evidence that the click registered, so
+   * every action felt like the app had missed it.
+   *
+   * These edits are all ones the server cannot refuse for a reason the client
+   * does not already know: the buttons only render for an owner, and access was
+   * settled before the card was drawn. So the optimistic answer is the real one
+   * often enough to be worth showing, and `onError` puts the old board back on
+   * the rare occasion it is not.
+   */
+  const patchBoard = async (
+    edit: (
+      data: RouterOutputs["library"]["browse"],
+    ) => RouterOutputs["library"]["browse"],
+  ) => {
+    // Stop any refetch already in flight, or it can land after this edit and
+    // overwrite it with the state the server held a moment ago.
+    await utils.library.browse.cancel({ folderId });
+    const previous = utils.library.browse.getData({ folderId });
+    utils.library.browse.setData({ folderId }, (old) =>
+      old ? edit(old) : old,
+    );
+    return { previous };
+  };
+
+  const restoreBoard = (context?: {
+    previous?: RouterOutputs["library"]["browse"];
+  }) => {
+    if (context?.previous) {
+      utils.library.browse.setData({ folderId }, context.previous);
+    }
+  };
+
   const createScript = api.script.create.useMutation({
     onSuccess: (script) => {
       refresh();
@@ -81,29 +119,55 @@ export function LibraryBoard({ folderId }: { folderId: string | null }) {
     },
   });
   const renameFolder = api.folder.rename.useMutation({
-    onSuccess: () => {
+    onMutate: ({ id, name }) => {
       setRenaming(null);
-      refresh();
+      return patchBoard((data) => ({
+        ...data,
+        folders: data.folders.map((folder) =>
+          folder.id === id ? { ...folder, name } : folder,
+        ),
+      }));
     },
+    onError: (_error, _input, context) => restoreBoard(context),
+    onSettled: refresh,
   });
   const removeFolder = api.folder.remove.useMutation({
-    onSuccess: () => {
+    onMutate: ({ id }) => {
       setPendingDelete(null);
-      refresh();
+      return patchBoard((data) => ({
+        ...data,
+        folders: data.folders.filter((folder) => folder.id !== id),
+      }));
     },
+    onError: (_error, _input, context) => restoreBoard(context),
+    // The scripts that were inside come back to the top level, and only the
+    // server knows which those are, so this one really does need the refetch,
+    // it just no longer has to happen before the folder disappears.
+    onSettled: refresh,
   });
   const duplicate = api.script.duplicate.useMutation({ onSuccess: refresh });
   const removeScript = api.script.remove.useMutation({
-    onSuccess: () => {
+    onMutate: ({ id }) => {
       setPendingDelete(null);
-      refresh();
+      return patchBoard((data) => ({
+        ...data,
+        scripts: data.scripts.filter((script) => script.id !== id),
+      }));
     },
+    onError: (_error, _input, context) => restoreBoard(context),
+    onSettled: refresh,
   });
   const leave = api.share.leave.useMutation({
-    onSuccess: () => {
+    onMutate: ({ id }) => {
       setPendingDelete(null);
-      refresh();
+      return patchBoard((data) => ({
+        ...data,
+        folders: data.folders.filter((folder) => folder.shareId !== id),
+        scripts: data.scripts.filter((script) => script.shareId !== id),
+      }));
     },
+    onError: (_error, _input, context) => restoreBoard(context),
+    onSettled: refresh,
   });
 
   const data = view.data;
@@ -174,7 +238,7 @@ export function LibraryBoard({ folderId }: { folderId: string | null }) {
             {data?.folder
               ? data.access === "owner"
                 ? "Shared folders pass their access down to everything inside."
-                : `Shared with you — you can ${data.access === "editor" ? "edit" : "read and present"} what is in here.`
+                : `Shared with you: you can ${data.access === "editor" ? "edit" : "read and present"} what is in here.`
               : "Write here, then send the words to whichever screen is pointed at you."}
           </p>
         </div>
@@ -383,13 +447,17 @@ export function LibraryBoard({ folderId }: { folderId: string | null }) {
                       <button
                         type="button"
                         onClick={() => duplicate.mutate({ id: script.id })}
+                        // The copy is named and numbered by the server, so this
+                        // is the one action here that cannot be drawn before the
+                        // answer arrives. It can at least say it is working.
+                        disabled={duplicate.isPending}
                         aria-label="Duplicate"
                         title={
                           script.access === "owner"
                             ? "Duplicate"
                             : "Save a copy I can edit"
                         }
-                        className="text-faint transition-colors hover:text-ink"
+                        className="text-faint transition-colors hover:text-ink disabled:opacity-50"
                       >
                         <Copy size={15} weight="bold" />
                       </button>
@@ -766,7 +834,7 @@ function LeaveButton({
       type="button"
       onClick={onAsk}
       aria-label="Remove from my library"
-      title="Remove from my library — the owner keeps it"
+      title="Remove from my library; the owner keeps it"
       className="shrink-0 text-faint transition-colors hover:text-coral"
     >
       <SignOut size={15} weight="bold" />
@@ -796,7 +864,7 @@ function EmptyState({
           ? canEdit
             ? "Add a script here, or move one in from somewhere else."
             : "Nothing has been put in here yet."
-          : "Start with the sample script — it walks through connecting a second device while you read it off the first."}
+          : "Start with the sample script: it walks through connecting a second device while you read it off the first."}
       </p>
       {!inFolder && canEdit ? (
         <Button

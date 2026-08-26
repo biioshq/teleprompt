@@ -11,7 +11,6 @@ import {
   loadFolders,
   requireFolder,
   subtreeHeight,
-  viewerFor,
   withDescendants,
 } from "~/server/library/access";
 
@@ -47,7 +46,7 @@ export const folderRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const viewer = await viewerFor(ctx.db, ctx.session.user.id);
+      const viewer = ctx.viewer;
 
       if (input.parentId) {
         await requireFolder(ctx.db, viewer, input.parentId, "owner");
@@ -81,7 +80,7 @@ export const folderRouter = createTRPCRouter({
   rename: protectedProcedure
     .input(z.object({ id: z.string().uuid(), name: nameInput }))
     .mutation(async ({ ctx, input }) => {
-      const viewer = await viewerFor(ctx.db, ctx.session.user.id);
+      const viewer = ctx.viewer;
       await requireFolder(ctx.db, viewer, input.id, "owner");
 
       const [updated] = await ctx.db
@@ -100,7 +99,7 @@ export const folderRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const viewer = await viewerFor(ctx.db, ctx.session.user.id);
+      const viewer = ctx.viewer;
       await requireFolder(ctx.db, viewer, input.id, "owner");
 
       if (input.parentId === input.id) {
@@ -147,13 +146,13 @@ export const folderRouter = createTRPCRouter({
     }),
 
   /**
-   * Delete a folder and the folders inside it. Scripts are never deleted —
+   * Delete a folder and the folders inside it. Scripts are never deleted;
    * they come back to the top level, where they can be found again.
    */
   remove: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      const viewer = await viewerFor(ctx.db, ctx.session.user.id);
+      const viewer = ctx.viewer;
       await requireFolder(ctx.db, viewer, input.id, "owner");
 
       // The database cascade would take the subfolders and set every script's

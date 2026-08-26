@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { browse, sharedRoots, viewerFor } from "~/server/library/access";
+import { browse, sharedRoots } from "~/server/library/access";
 
 /**
  * What the dashboard reads.
@@ -15,13 +15,13 @@ export const libraryRouter = createTRPCRouter({
   browse: protectedProcedure
     .input(z.object({ folderId: z.string().uuid().nullable() }))
     .query(async ({ ctx, input }) => {
-      const viewer = await viewerFor(ctx.db, ctx.session.user.id);
+      const viewer = ctx.viewer;
       return browse(ctx.db, viewer, input.folderId);
     }),
 
   /** Only what other people shared, and only the roots of it. */
   sharedWithMe: protectedProcedure.query(async ({ ctx }) => {
-    const viewer = await viewerFor(ctx.db, ctx.session.user.id);
+    const viewer = ctx.viewer;
     return sharedRoots(ctx.db, viewer);
   }),
 });

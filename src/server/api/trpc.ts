@@ -13,6 +13,8 @@ import { ZodError } from "zod";
 
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
+import { viewerFor } from "~/server/library/access";
+import { normaliseEmail, type Viewer } from "~/server/library/tree";
 
 /**
  * 1. CONTEXT
@@ -113,14 +115,36 @@ export const publicProcedure = t.procedure.use(timingMiddleware);
  */
 export const protectedProcedure = t.procedure
   .use(timingMiddleware)
-  .use(({ ctx, next }) => {
+  .use(async ({ ctx, next }) => {
     if (!ctx.session?.user) {
       throw new TRPCError({ code: "UNAUTHORIZED" });
     }
+
+    /**
+     * The viewer, without asking the database for it again.
+     *
+     * Auth.js's database strategy resolves a session with a single statement
+     * that inner-joins the user row, so by the time any procedure runs, the id
+     * and the address have already been read, and the join is also what
+     * proves the account still exists, because deleting a user cascades its
+     * sessions away. Every procedure used to open with `viewerFor`, which
+     * re-read that same row: one round trip, before any of the work the call
+     * was actually for, on essentially every request in the app.
+     *
+     * The lookup is kept as a fallback rather than deleted. It costs nothing
+     * when the session carries an address, and a session that somehow does not
+     * should degrade to a slower answer rather than no answer.
+     */
+    const email = ctx.session.user.email;
+    const viewer: Viewer = email
+      ? { id: ctx.session.user.id, email: normaliseEmail(email) }
+      : await viewerFor(ctx.db, ctx.session.user.id);
+
     return next({
       ctx: {
         // infers the `session` as non-nullable
         session: { ...ctx.session, user: ctx.session.user },
+        viewer,
       },
     });
   });

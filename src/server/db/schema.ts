@@ -9,7 +9,7 @@ import {
 } from "drizzle-orm/pg-core";
 // `import type`, not the inline-type form: under `verbatimModuleSyntax` the
 // inline form leaves a real import of a subpath `next-auth` does not export at
-// runtime. The bundler resolves it anyway, so nothing was broken — but nothing
+// runtime. The bundler resolves it anyway, so nothing was broken, but nothing
 // outside the bundler could load this file either.
 import type { AdapterAccount } from "next-auth/adapters";
 
@@ -108,7 +108,7 @@ export const verificationTokens = createTable(
 /**
  * A folder belongs to exactly one account and may sit inside another folder.
  *
- * The tree is walked in SQL rather than in application code — see
+ * The tree is walked in SQL rather than in application code; see
  * `server/library/access.ts`. Depth is bounded there rather than here: a
  * database constraint cannot express "not too deep" without a trigger, and the
  * cases that matter (a cycle, a folder moved into its own child) are prevented
@@ -204,7 +204,7 @@ export type ShareRole = (typeof SHARE_ROLES)[number];
  * with no invitation to accept and no placeholder user to reconcile later.
  *
  * That is only safe because every address on this system is verified by the
- * identity provider before it ever reaches the database — see
+ * identity provider before it ever reaches the database; see
  * `server/auth/config.ts`. Without that guarantee, sharing by address would be
  * sharing with whoever claimed it first.
  *
@@ -263,7 +263,7 @@ export const shares = createTable(
 );
 
 /* -------------------------------------------------------------------------- */
-/* Rooms — one live teleprompter session shared by an account's devices        */
+/* Rooms: one live teleprompter session shared by an account's devices        */
 /* -------------------------------------------------------------------------- */
 
 export const rooms = createTable(
@@ -285,7 +285,7 @@ export const rooms = createTable(
     /**
      * High-entropy secret that names the Realtime channel and gates the
      * WebRTC signalling. Only handed to signed-in devices on the owning
-     * account — see `docs/architecture`.
+     * account; see `docs/architecture`.
      */
     channelKey: d.varchar({ length: 64 }).notNull(),
 
@@ -330,6 +330,13 @@ export const rooms = createTable(
     index("room_owner_idx").on(t.ownerId),
     index("room_code_idx").on(t.code),
     index("room_status_idx").on(t.status),
+    // Rooms are ended, never deleted, so this table only grows. Two hot paths
+    // look a room up by the script behind it - the editor's autosave, which
+    // pushes every edit into whatever room is showing that script, and the
+    // button that offers an existing room rather than opening a second one -
+    // and without this both of them read every room the deployment has ever
+    // opened to find the handful that matter.
+    index("room_script_idx").on(t.scriptId),
   ],
 );
 
