@@ -28,6 +28,7 @@ export default function Page() {
         { id: "mirror", label: "Mirrored text looks wrong" },
         { id: "ios", label: "iOS oddities" },
         { id: "stuck", label: "A device is stuck connecting" },
+        { id: "db-push", label: "db:push crashes" },
         { id: "signin", label: "Sign-in fails" },
         { id: "prod-only", label: "Works locally, fails deployed" },
       ]}
@@ -208,6 +209,39 @@ export default function Page() {
           to.
         </li>
       </ol>
+
+      <h2 id="db-push">
+        <code>db:push</code> crashes with a TypeError
+      </h2>
+      <p>
+        If <code>npm run db:push</code> stops during{" "}
+        <em>Pulling schema from database</em> with something like{" "}
+        <code>
+          TypeError: Cannot read properties of undefined (reading
+          &lsquo;replace&rsquo;)
+        </code>{" "}
+        pointing inside <code>drizzle-kit/bin.cjs</code>, the problem is the
+        connection, not your schema.
+      </p>
+      <p>
+        Supabase&rsquo;s transaction pooler on port 6543 is the right choice for
+        the app and the wrong one for the Drizzle CLI. The CLI introspects by
+        firing a burst of small per-table queries, and on that pooler some
+        answers come back matched to the wrong question — the check-constraint
+        reader is handed a row from the foreign-key query, which has no
+        definition to read. It only becomes fatal once the schema contains a
+        single <code>CHECK</code> constraint anywhere, because until then that
+        code never runs, so it appears the day you add one and looks like your
+        fault.
+      </p>
+      <p>
+        <code>drizzle.config.ts</code> already handles this by using port 5432
+        for CLI work, which keeps one connection for the whole run. If your
+        setup does not match that substitution, set{" "}
+        <code>DIRECT_DATABASE_URL</code> to a session-mode connection and it
+        will be used instead. Nothing about the app&rsquo;s own connection
+        changes.
+      </p>
 
       <h2 id="signin">Sign-in fails</h2>
       <Note tone="coral" title="UntrustedHost">

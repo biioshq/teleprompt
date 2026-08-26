@@ -22,6 +22,14 @@ export const env = createEnv({
     AUTH_GITHUB_ID: z.string().optional(),
     AUTH_GITHUB_SECRET: z.string().optional(),
     DATABASE_URL: z.string().url(),
+    /**
+     * Optional. A session-mode connection, used only by the Drizzle CLI.
+     *
+     * The app wants the transaction pooler; `drizzle-kit` cannot use it. See
+     * the comment in `drizzle.config.ts` — if that file's automatic
+     * substitution does not fit your setup, set this and it wins.
+     */
+    DIRECT_DATABASE_URL: z.string().url().optional(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
@@ -50,6 +58,7 @@ export const env = createEnv({
     AUTH_GITHUB_ID: process.env.AUTH_GITHUB_ID,
     AUTH_GITHUB_SECRET: process.env.AUTH_GITHUB_SECRET,
     DATABASE_URL: process.env.DATABASE_URL,
+    DIRECT_DATABASE_URL: process.env.DIRECT_DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
