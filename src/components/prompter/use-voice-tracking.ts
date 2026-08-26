@@ -17,7 +17,7 @@ import {
  * Three pieces meet here and nowhere else: the recogniser hands over what it
  * heard, the tracker decides where in the script that was, and the engine is
  * told to move there. Everything crossing between them is a word index, which
- * keeps each piece testable on its own — the tracker has no idea a browser
+ * keeps each piece testable on its own: the tracker has no idea a browser
  * exists and the engine has no idea anyone is talking.
  *
  * None of it touches React state on the hot path. A phrase arrives several
@@ -95,7 +95,7 @@ export function useVoiceTracking({
   content: string;
   language: string;
   /**
-   * Called when listening stops for a reason the reader did not choose —
+   * Called when listening stops for a reason the reader did not choose:
    * a blocked microphone, a browser that cannot do it, no connection. The
    * room's shared flag has to come back down or the display sits there
    * claiming to listen.
@@ -122,7 +122,7 @@ export function useVoiceTracking({
   /**
    * Everything the readout shows, written from callbacks and sampled on a
    * timer. Routing it through `setState` directly would re-render the whole
-   * stage on every interim guess — several times a second, mid-take.
+   * stage on every interim guess, several times a second, mid-take.
    */
   const readout = useRef({
     transcript: "",

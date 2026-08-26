@@ -116,7 +116,7 @@ export function useSyncLink({
       const direct = mesh?.send(payload);
 
       // Cover anyone the mesh could not reach, and anyone not yet in the mesh at
-      // all. Duplicates are harmless — the receiver dedupes on (from, seq).
+      // all. Duplicates are harmless: the receiver dedupes on (from, seq).
       const needsRelay =
         options?.alwaysRelay === true || !direct || direct.missing.length > 0;
       if (needsRelay && channelRef.current) {
@@ -199,7 +199,7 @@ export function useSyncLink({
       ? new PeerMesh({
           selfKey: deviceKey,
           sendSignal: (to, signal: Signal) => {
-            // Signalling always goes over the relay — it is what bootstraps
+            // Signalling always goes over the relay: it is what bootstraps
             // the direct path, so it cannot depend on the direct path.
             void channelRef.current?.send({
               type: "broadcast",

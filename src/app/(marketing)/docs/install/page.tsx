@@ -31,8 +31,8 @@ export default function Page() {
     >
       <h2 id="why">Why install it</h2>
       <p>
-        Teleprompt is a progressive web app, so installing it is not a download
-        — it is the same site, given its own icon, its own window and no browser
+        Teleprompt is a progressive web app, so installing it is not a download:
+        it is the same site, given its own icon, its own window and no browser
         chrome. That matters more than it sounds:
       </p>
       <ul>
@@ -58,7 +58,7 @@ export default function Page() {
 
       <h2 id="ios">iPhone and iPad</h2>
       <p>
-        Safari does not offer an install API, so this one is manual — and it has
+        Safari does not offer an install API, so this one is manual, and it has
         to be Safari; Chrome on iOS cannot add to the home screen.
       </p>
       <ol>
@@ -112,8 +112,8 @@ export default function Page() {
         server.
       </p>
       <p>
-        A live room needs a connection in any case — the two devices have to
-        find each other before they can talk directly. See{" "}
+        A live room needs a connection in any case: the two devices have to find
+        each other before they can talk directly. See{" "}
         <Link href="/docs/troubleshooting">Troubleshooting</Link> if a session
         will not connect.
       </p>

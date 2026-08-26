@@ -8,7 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 /**
  * Join codes leave out every character that gets misread when someone reads a
  * code off one screen and types it into another. Excluded entirely: 0, 1, 5,
- * B, I, O, S, U and V — so no pair of glyphs in the alphabet is confusable.
+ * B, I, O, S, U and V; so no pair of glyphs in the alphabet is confusable.
  */
 const CODE_ALPHABET = "ACDEFGHJKLMNPQRTWXYZ2346789";
 
@@ -28,7 +28,7 @@ export function generateJoinCode(): string {
  *
  * It deliberately does not substitute lookalike characters. Both halves of
  * every confusable pair are absent from the alphabet, so an `O` or a `0` is
- * simply not part of any real code — silently rewriting one into the other
+ * simply not part of any real code; silently rewriting one into the other
  * would turn an obvious typo into a code that looks plausible and can never
  * match.
  */

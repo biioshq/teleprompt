@@ -117,7 +117,7 @@ export function ScriptsBoard() {
           <FileText size={26} weight="bold" className="mx-auto text-brand" />
           <h2 className="mt-5 text-xl">Nothing written yet</h2>
           <p className="mx-auto mt-3 max-w-sm text-[0.9375rem] leading-relaxed text-muted">
-            Start with the sample script — it walks through connecting a second
+            Start with the sample script; it walks through connecting a second
             device while you read it off the first.
           </p>
           <Button

@@ -56,8 +56,8 @@ export function PrompterClient({ roomId }: { roomId: string }) {
   );
 
   /**
-   * Held here rather than inside the stage on purpose. A room that is over has
-   * to take the stage down with it — the engine, the realtime link, the
+   * Held here rather than inside the stage on purpose. A room that is over
+   * has to take the stage down with it: the engine, the realtime link, the
    * microphone, the wake lock and the heartbeat all live below this line, and
    * a message painted over the top of them would leave every one of them
    * running against a room that no longer exists.
@@ -158,15 +158,15 @@ function PrompterStage({
    * A display that is not the one listening still shows the spoken words.
    *
    * A room can hold a second display for a co-host, and it follows the
-   * driver's anchor like any other device — which is all this needs, because
+   * driver's anchor like any other device, which is all this needs, because
    * everything above the reading line has been read.
    *
    * Declared above `useVoiceTracking` on purpose. React runs every cleanup
-   * before any setup, in hook order, so putting this first means that when the
-   * microphone starts, this effect clears its derived marks *before* the voice
-   * session writes real ones — and when it stops, the voice session's teardown
-   * runs before this effect takes the marks back over. The other order wipes
-   * the marks a moment after they are set.
+   * before any setup, in hook order, so putting this first means that when
+   * the microphone starts, this effect clears its derived marks *before* the
+   * voice session writes real ones, and when it stops, the voice session's
+   * teardown runs before this effect takes the marks back over. The other
+   * order wipes the marks a moment after they are set.
    */
   useEffect(() => {
     engine.setSpokenFollowsPosition(state.voiceTracking && !listening);
@@ -181,7 +181,7 @@ function PrompterStage({
   });
 
   /**
-   * Playback moved to a display that cannot listen — its browser has no
+   * Playback moved to a display that cannot listen: its browser has no
    * recognition. Nobody is holding the microphone, so the room should stop
    * saying that somebody is.
    */

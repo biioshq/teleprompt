@@ -3,7 +3,7 @@ import { type Metadata } from "next";
 import { DocsNav } from "~/components/docs/docs-nav";
 
 export const metadata: Metadata = {
-  title: { default: "Documentation", template: "%s — Teleprompt docs" },
+  title: { default: "Documentation", template: "%s | Teleprompt docs" },
 };
 
 export default function DocsLayout({

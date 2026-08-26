@@ -36,7 +36,7 @@
   --color-brand-deep: #c26200;
   --color-brand-soft: #fff1e0;
 
-  /* Supporting spots — used sparingly, for meaning only ------------------- */
+  /* Supporting spots: used sparingly, for meaning only -------------------- */
   --color-jade: #34ad6c;
   --color-jade-soft: #e6f4ec;
   --color-coral: #f74445;
@@ -47,7 +47,7 @@
   --color-citrine: #f0d80b;
   --color-navy: #0b1929;
 
-  /* Stage surfaces — the prompter and the remote -------------------------- */
+  /* Stage surfaces: the prompter and the remote --------------------------- */
   --color-stage: #0b0b0c;
   --color-stage-raised: #161617;
   --color-stage-line: #2a2a2c;
@@ -525,7 +525,7 @@
   /* --- The landing-page demo -------------------------------------------- */
 
   /* A deeper fade than the prompter's own. These panels wear chrome the real
-     reading surface does not — a header at the top, a transport at the foot —
+     reading surface does not (a header at the top, a transport at the foot),
      and text arriving at full strength underneath either of them reads as a
      collision rather than as a script running past. */
   .tp-demo-fade {
@@ -546,7 +546,7 @@
   }
 
   /* One line of the demo script. The rows are a fixed number of `em` tall and
-     the engine scrolls by a count of them, so a cue — set several sizes down —
+     the engine scrolls by a count of them, so a cue, set several sizes down,
      cannot shorten its own row and walk every line after it off the reading
      line.
 

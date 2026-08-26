@@ -35,7 +35,7 @@ export default function Page() {
       <h2 id="requirements">What you need</h2>
       <ul>
         <li>Node 20 or newer, and npm.</li>
-        <li>A Supabase project — the free tier is enough.</li>
+        <li>A Supabase project. The free tier is enough.</li>
         <li>A Google Cloud project with an OAuth 2.0 client.</li>
       </ul>
       <p>
@@ -63,7 +63,7 @@ cp .env.example .env`}</code>
         <li>
           Go to <strong>Project Settings &rarr; API</strong> and copy the{" "}
           <strong>Project URL</strong> and the{" "}
-          <strong>publishable / anon key</strong>. Both are public by design —
+          <strong>publishable / anon key</strong>. Both are public by design;
           they go into <code>NEXT_PUBLIC_</code> variables and ship to the
           browser.
         </li>
@@ -81,13 +81,16 @@ cp .env.example .env`}</code>
         cannot reach it.
         <br />
         <br />
-        Nothing in the resulting error mentions the database. The adapter throws
-        while Auth.js is handling the request, so what you actually see is{" "}
-        <em>
-          &ldquo;This deployment&rsquo;s sign-in is misconfigured&rdquo;
-        </em>{" "}
-        on the sign-in page, in production only, with the same environment
-        variables that work locally.
+        Nothing in the resulting error mentions the database. It arrives as a
+        generic sign-in misconfiguration, in production only, with the same
+        environment variables that work locally.{" "}
+        <Link
+          href="/docs/deployment-troubleshooting"
+          className="text-current decoration-current/40"
+        >
+          Deployment troubleshooting
+        </Link>{" "}
+        covers confirming that is what you are looking at.
         <br />
         <br />
         So use a pooler URI. Two things differ from the direct string: the host
@@ -105,7 +108,7 @@ cp .env.example .env`}</code>
         Supabase Auth or Storage, and it never reads a table from the browser,
         so there are no row-level security policies to write. Realtime broadcast
         works with the anon key out of the box, and access control is the
-        room&rsquo;s 256-bit channel key — see{" "}
+        room&rsquo;s 256-bit channel key. See{" "}
         <Link href="/docs/architecture">Architecture</Link>.
       </p>
 
@@ -208,7 +211,7 @@ DATABASE_URL="postgresql://postgres.REF:PASSWORD@aws-0-REGION.pooler.supabase.co
 NEXT_PUBLIC_SUPABASE_URL="https://REF.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="…"
 
-# Only off Vercel — see below. Bare hostname, no scheme.
+# Only off Vercel; see below. Bare hostname, no scheme.
 # NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL="teleprompt.example"`}</code>
       </pre>
       <p>
@@ -251,7 +254,7 @@ npm run preview    # build, then serve it`}</code>
       <Note tone="blue" title="Where the public origin comes from">
         Canonical links, Open Graph tags and the sitemap all need to know the
         site&rsquo;s real origin. Teleprompt reads it from{" "}
-        <code>NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL</code> — a Vercel system
+        <code>NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL</code>, a Vercel system
         variable that is populated automatically and, usefully, always points at
         production even from a preview deployment, so a preview never advertises
         itself as the real site. The value carries no scheme, so the app adds{" "}
@@ -273,8 +276,8 @@ npm run preview    # build, then serve it`}</code>
         </li>
         <li>
           <strong>Anywhere else</strong>, set that same variable by hand to your
-          own domain. It wants a bare hostname — <code>teleprompt.example</code>
-          , not <code>https://teleprompt.example/</code>. Leave it unset and the
+          own domain. It wants a bare hostname: <code>teleprompt.example</code>,
+          not <code>https://teleprompt.example/</code>. Leave it unset and the
           app falls back to localhost, which will put localhost links in your
           sitemap and Open Graph tags.
         </li>
@@ -288,6 +291,15 @@ npm run preview    # build, then serve it`}</code>
           require a secure context.
         </li>
       </ul>
+      <p>
+        For the things that only go wrong once it is deployed &mdash; sign-in
+        that works on your machine and not on the host, a database the
+        deployment cannot reach &mdash; see{" "}
+        <Link href="/docs/deployment-troubleshooting">
+          Deployment troubleshooting
+        </Link>
+        , which starts at <code>/api/health</code>.
+      </p>
 
       <h2 id="reference">Variable reference</h2>
       <table>

@@ -41,8 +41,8 @@ export default function Page() {
         That works only while both devices are the same shape. In practice they
         never are: one is a laptop in landscape at 72px type, the other is a
         phone in portrait at 19px. The same pixel offset is a completely
-        different sentence on each — and the whole promise of the product is
-        that the two screens show the same words.
+        different sentence on each, and the whole promise of the product is that
+        the two screens show the same words.
       </p>
       <p>
         Normalising helps less than it looks. A fraction of total scroll height

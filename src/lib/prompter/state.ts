@@ -8,7 +8,7 @@ import { z } from "zod";
  * Instead we sync a *text anchor*: which block is currently under the reading
  * line, and how far through that block we are. Every device resolves that back
  * to its own pixel offset. Whatever a device's geometry, the same words sit on
- * the reading line — which is the whole point of the product.
+ * the reading line, which is the whole point of the product.
  */
 export const anchorSchema = z.object({
   /** Index into the block list produced by `splitIntoBlocks()`. */
@@ -95,11 +95,11 @@ export const prompterStateSchema = z.object({
 
   /**
    * Whether a device in this room is listening to the reader and scrolling to
-   * match. Shared rather than local: the remote has to be
-   * able to see that the display is listening, and to say when it should stop.
+   * match. Shared rather than local: the remote has to be able to see that the
+   * display is listening, and to say when it should stop.
    *
-   * Defaulted rather than required so that a room saved before this existed —
-   * and a device running a build from before it existed — still parses.
+   * Defaulted rather than required so that a room saved before this existed
+   * (and a device running a build from before it existed) still parses.
    */
   voiceTracking: z.boolean().default(false),
 

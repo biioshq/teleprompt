@@ -64,7 +64,7 @@ export function MoveDialog({
 
   /**
    * A folder cannot be moved into itself or into anything it contains. The
-   * server refuses it too — this only keeps the impossible choice off screen,
+   * server refuses it too; this only keeps the impossible choice off screen,
    * because offering an option and then rejecting it is a worse way to explain
    * a rule than not offering it.
    */

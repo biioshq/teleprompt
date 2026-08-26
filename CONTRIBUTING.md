@@ -25,8 +25,8 @@ The full walkthrough is in the running app at `/docs/self-hosting`.
 - **TypeScript is strict**, including `noUncheckedIndexedAccess`.
   `npm run typecheck` has to pass.
 - **Prettier decides formatting.** Run `npm run format` before committing.
-- **Validate at every trust boundary.** Anything arriving from the network —
-  a tRPC input, a realtime message, a value read back out of the database — goes
+- **Validate at every trust boundary.** Anything arriving from the network (a
+  tRPC input, a realtime message, a value read back out of the database) goes
   through Zod before it is used.
 - **The frame loop does not touch React.** Anything running per frame belongs in
   `src/components/prompter/engine.ts`, writing to the DOM directly. Routing
@@ -39,7 +39,7 @@ The full walkthrough is in the running app at `/docs/self-hosting`.
 ## Testing a change by hand
 
 There are no automated tests for the sync path, and there is no substitute for
-two real devices — the WebRTC tie-break and the presence ordering both depend on
+two real devices: the WebRTC tie-break and the presence ordering both depend on
 there being two distinct device keys, so one browser window cannot exercise
 them.
 
@@ -51,19 +51,19 @@ them.
    live; **Relay** means you are exercising the fallback. Both need to work.
 4. Test a reload mid-session. Persistence is easy to break and easy to miss.
 5. If you changed anything about caching or the manifest, test with
-   `npm run preview` — the service worker is only registered in production
+   `npm run preview`; the service worker is only registered in production
    builds.
 
 ## Areas that would help
 
-- **TURN support** — an optional, configurable TURN server so direct routes are
+- **TURN support**: an optional, configurable TURN server so direct routes are
   possible on networks that block UDP.
-- **Import** — Google Docs, plain text, and a paste handler that converts
+- **Import**: Google Docs, plain text, and a paste handler that converts
   formatting to Markdown.
-- **Timed segments** — a per-section target duration with a countdown on the
+- **Timed segments**: a per-section target duration with a countdown on the
   remote.
-- **Foot pedals** — Gamepad API mapping so a pedal can drive play and step.
-- **Accessibility** — screen-reader behaviour on the prompter surface deserves a
+- **Foot pedals**: Gamepad API mapping so a pedal can drive play and step.
+- **Accessibility**: screen-reader behaviour on the prompter surface deserves a
   proper look.
 
 ## Sending a change

@@ -2,14 +2,14 @@ import { ImageResponse } from "next/og";
 
 import { SITE } from "~/lib/site";
 
-export const alt = `${SITE.name} — ${SITE.tagline}`;
+export const alt = `${SITE.name}: ${SITE.tagline}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 /**
  * Satori cannot read woff2, which is the only format `next/font` keeps, so the
  * brand face is pulled as a TTF at render time. If that fetch fails the card
- * still renders in the built-in face — an off-brand card beats a broken one.
+ * still renders in the built-in face; an off-brand card beats a broken one.
  */
 async function loadFont(family: string, weight: number) {
   try {

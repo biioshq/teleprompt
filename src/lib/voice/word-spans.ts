@@ -3,7 +3,7 @@
  *
  * Voice tracking needs two things the block list cannot give it: the exact
  * words as the reader sees them, and where each one physically sits on screen.
- * Counting words from the Markdown source would give neither — link syntax,
+ * Counting words from the Markdown source would give neither: link syntax,
  * emphasis markers and entities all mean the source and the rendered line
  * disagree about what a word is, and disagreeing by one is enough to light up
  * the wrong part of the sentence.

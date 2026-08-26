@@ -25,7 +25,7 @@ export default function PrivacyPage() {
         <p>
           This notice covers the hosted version of {SITE.name}, operated by{" "}
           {BIIOS.name} ({BIIOS.city}). If you run your own instance, none of
-          your data reaches us and this notice does not apply to it —{" "}
+          your data reaches us and this notice does not apply to it;{" "}
           <Link href="/docs/self-hosting">Self-hosting</Link> explains what that
           involves.
         </p>
@@ -46,8 +46,8 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Content you create.</strong> The scripts you write, and the
-            rooms you open — including the snapshot of the script a room is
-            using and its playback state.
+            rooms you open (including the snapshot of the script a room is using
+            and its playback state).
           </li>
           <li>
             <strong>Device labels.</strong> A readable platform string such as
@@ -70,8 +70,8 @@ export default function PrivacyPage() {
           </li>
           <li>
             No audio or video reaches us, ever. Camera access is never requested
-            at all. The microphone is requested in exactly one place — voice
-            tracking, which only listens while you hold it on — and even then
+            at all. The microphone is requested in exactly one place (voice
+            tracking, which only listens while you hold it on), and even then
             the audio goes to your browser&rsquo;s own speech recognition, never
             to us: we receive no audio and store no transcript. See{" "}
             <Link href="/docs/privacy-and-data#voice">Privacy and data</Link>{" "}
@@ -98,14 +98,14 @@ export default function PrivacyPage() {
             only the one you sign in with.
           </li>
           <li>
-            <strong>Supabase</strong> — the Postgres database and the realtime
+            <strong>Supabase</strong>, the Postgres database and the realtime
             relay.
           </li>
           <li>
-            <strong>Our hosting provider</strong> — serving the application.
+            <strong>Our hosting provider</strong>, serving the application.
           </li>
           <li>
-            <strong>Public STUN servers</strong> — consulted while two of your
+            <strong>Public STUN servers</strong>, consulted while two of your
             devices look for a direct route. They observe IP addresses during
             connection setup and never see message content.
           </li>
@@ -121,7 +121,7 @@ export default function PrivacyPage() {
           Scripts stay until you delete them or delete your account. Rooms close
           themselves after five quiet minutes, and their device records are
           deleted when they do. Deleting your account removes everything
-          attached to it — the schema cascades from the user record, so nothing
+          attached to it; the schema cascades from the user record, so nothing
           is left orphaned.
         </p>
 
@@ -162,7 +162,7 @@ export default function PrivacyPage() {
 
         <h2 id="contact">Contact</h2>
         <p>
-          {BIIOS.name}, {BIIOS.city} —{" "}
+          {BIIOS.name}, {BIIOS.city}:{" "}
           <a href={BIIOS.contact} rel="noreferrer noopener">
             biios.in/contact
           </a>

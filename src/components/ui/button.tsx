@@ -12,7 +12,7 @@ const BASE =
   "disabled:pointer-events-none disabled:opacity-45";
 
 const VARIANTS: Record<Variant, string> = {
-  // Ink on paper with a hard offset shadow that collapses on press — the
+  // Ink on paper with a hard offset shadow that collapses on press: the
   // Biios signature, and the only "depth" in the system.
   primary:
     "border-ink bg-ink text-paper shadow-hard hover:-translate-x-px hover:-translate-y-px " +

@@ -23,9 +23,9 @@ import { type Anchor } from "~/lib/prompter/state";
  * 60fps off updates that arrive ten times a second.
  *
  * A driving device has a second pacer available: a voice target, set from what
- * the reader is actually saying. When one is present it replaces the clock —
- * the script stops being something that moves at a rate and becomes something
- * that moves when they do.
+ * the reader is actually saying. When one is present it replaces the clock; the
+ * script stops being something that moves at a rate and becomes something that
+ * moves when they do.
  */
 
 export type EngineMode = "drive" | "follow";
@@ -35,7 +35,7 @@ type Measurement = { top: number; height: number };
 export type EngineSettings = {
   speedWpm: number;
   readingLine: number;
-  /** Spoken words in the whole script — sets the pixels-per-word scale. */
+  /** Spoken words in the whole script: sets the pixels-per-word scale. */
   totalWords: number;
 };
 
@@ -84,9 +84,9 @@ const VOICE_EASING = 0.09;
  * a client rect reports and layout offsets do not.
  *
  * The chain is walked rather than assumed. `offsetTop` is measured from
- * `offsetParent`, and that is usually the block — but not inside a table,
- * where every engine reports the cell instead. A word in a table would
- * otherwise measure as if it were at the top of the block.
+ * `offsetParent`, and that is usually the block, but not inside a table, where
+ * every engine reports the cell instead. A word in a table would otherwise
+ * measure as if it were at the top of the block.
  */
 function offsetWithin(node: HTMLElement, ancestor: HTMLElement): number {
   let total = 0;
@@ -95,7 +95,7 @@ function offsetWithin(node: HTMLElement, ancestor: HTMLElement): number {
     total += current.offsetTop;
     current = current.offsetParent as HTMLElement | null;
   }
-  // The chain left the block without passing through it — a `position: fixed`
+  // The chain left the block without passing through it; a `position: fixed`
   // descendant would do this. One flat offset is a better guess than zero.
   return current === ancestor ? total : node.offsetTop;
 }
@@ -191,9 +191,9 @@ export class PrompterEngine {
   /* ---------------------------------------------------------------------- */
 
   /**
-   * Re-reads block geometry. Anything that reflows the text — a font size
-   * change, a rotation, a new script — has to go through here, and the anchor
-   * is preserved across the change so the reader does not lose their place.
+   * Re-reads block geometry. Anything that reflows the text (a font size
+   * change, a rotation, a new script) has to go through here, and the anchor is
+   * preserved across the change so the reader does not lose their place.
    */
   measure(preserveAnchor = true) {
     if (!this.viewport || !this.content) return;
@@ -266,7 +266,7 @@ export class PrompterEngine {
       return { blockIndex: 0, blockFraction: 0 };
     }
 
-    // Binary search — a long script is thousands of blocks, and this runs
+    // Binary search: a long script is thousands of blocks, and this runs
     // several times a second.
     let low = 0;
     let high = this.blocks.length - 1;
@@ -342,7 +342,7 @@ export class PrompterEngine {
     this.announceSeek();
   }
 
-  /** Move whole blocks — the remote's previous / next line buttons. */
+  /** Move whole blocks: the remote's previous / next line buttons. */
   stepBlocks(delta: number) {
     const current = this.getAnchor();
     const target = Math.min(
@@ -473,7 +473,7 @@ export class PrompterEngine {
     };
   }
 
-  /** The word nearest the reading line — used to re-place a lost tracker. */
+  /** The word nearest the reading line, used to re-place a lost tracker. */
   wordAtReadingLine(): number {
     if (this.wordTops.length === 0) return 0;
     let low = 0;
@@ -735,10 +735,10 @@ export class PrompterEngine {
   /**
    * Someone moved the text by hand: a tap, a drag, a step, a restart.
    *
-   * Voice tracking has to hear about this. Its idea of where the reader is
-   * came from what they said, and a hand on the script overrides that
-   * completely — without this the next phrase would drag the page straight
-   * back to where it had been, which reads as the scrub having failed.
+   * Voice tracking has to hear about this. Its idea of where the reader is came
+   * from what they said, and a hand on the script overrides that completely;
+   * without this the next phrase would drag the page straight back to where it
+   * had been, which reads as the scrub having failed.
    */
   onSeek(listener: () => void) {
     this.seekListeners.add(listener);

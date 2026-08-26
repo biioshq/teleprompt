@@ -63,7 +63,7 @@ export default function Page() {
             </td>
             <td>
               So that person can reach the script or folder. An address is
-              stored whether or not it has ever signed in — that is what lets a
+              stored whether or not it has ever signed in. That is what lets a
               grant be waiting for somebody rather than needing an invitation to
               be accepted. Owners can see and remove the grants they made;
               nobody else can read the list. See{" "}
@@ -94,7 +94,7 @@ export default function Page() {
         <li>No analytics, no tag manager, no third-party trackers.</li>
         <li>
           No recording of anything you say, and no camera access, ever. The
-          microphone is used in exactly one place —{" "}
+          microphone is used in exactly one place:{" "}
           <Link href="/docs/voice-tracking">voice tracking</Link>, which only
           listens while you turn it on, and is described in full{" "}
           <a href="#voice">below</a>.
@@ -109,7 +109,7 @@ export default function Page() {
       <Note title="Third parties in the path">
         Google and GitHub, for sign-in, and only the one you use. Supabase,
         which hosts the Postgres database and the realtime relay. Public STUN
-        servers, which help two devices discover a direct route — they see IP
+        servers, which help two devices discover a direct route. They see IP
         addresses during connection setup, never message content.
       </Note>
 
@@ -128,17 +128,17 @@ export default function Page() {
       </p>
       <ul>
         <li>
-          <code>teleprompt.device</code> — a random 128-bit identifier generated
+          <code>teleprompt.device</code>: a random 128-bit identifier generated
           in your browser. It is the presence key on the realtime channel and
           the address for WebRTC signalling. It is not derived from anything
           about your hardware, and clearing site data regenerates it.
         </li>
         <li>
-          <code>teleprompt.device.label</code> — the readable name shown in the
+          <code>teleprompt.device.label</code>: the readable name shown in the
           devices list.
         </li>
         <li>
-          <code>teleprompt:voice</code> — the language you picked for voice
+          <code>teleprompt:voice</code>: the language you picked for voice
           recognition on this browser. Only written once you change it.
         </li>
       </ul>
@@ -151,9 +151,9 @@ export default function Page() {
       <h2 id="wire">What crosses the network</h2>
       <p>
         During a session, the messages between your devices carry the playback
-        state — an anchor, a play flag, and the display settings. The script
-        text itself is fetched over HTTPS from the server by each device
-        separately; it is not streamed peer to peer.
+        state: an anchor, a play flag, and the display settings. The script text
+        itself is fetched over HTTPS from the server by each device separately;
+        it is not streamed peer to peer.
       </p>
       <p>
         When a direct WebRTC channel is open, those messages are encrypted
@@ -199,7 +199,7 @@ export default function Page() {
       <p>
         The room does record <em>that</em> a display is listening, because the
         remote has to be able to see it and switch it off. That flag is
-        deliberately not restored when a room is reopened — a microphone should
+        deliberately not restored when a room is reopened; a microphone should
         never turn itself on because of a saved row.
       </p>
       <Note tone="coral" title="If this is not a trade you want">
@@ -224,7 +224,7 @@ export default function Page() {
         </li>
         <li>
           Ending a room deletes its device records, whether you end it yourself
-          or it closes after five quiet minutes — a room that closed on its own
+          or it closes after five quiet minutes. A room that closed on its own
           releases them the next time the account opens a room or loads the
           dashboard, and stops reporting them straight away. The room row itself
           is marked ended.

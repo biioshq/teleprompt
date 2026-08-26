@@ -16,7 +16,7 @@ export async function AppHeader() {
           does not shunt the navigation off to one side: matching `1fr` edges
           centre the nav on the header itself rather than on whatever the logo
           and the account controls leave over. The bar stays a notch shorter
-          than the landing one — app chrome, not a front door. */}
+          than the landing one: app chrome, not a front door. */}
       <div className="mx-auto grid h-14 max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-6 gutter">
         <Link
           href="/app"

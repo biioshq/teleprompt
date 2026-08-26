@@ -9,11 +9,11 @@ import { shouldInitiateTo } from "~/lib/realtime/protocol";
  * Once two of an account's devices can see each other on the Realtime channel,
  * they try to open a direct data channel and move the high-rate traffic onto
  * it. When that succeeds the scroll position stops making a round trip to a
- * server at all — which on the same Wi-Fi is the difference between a few
+ * server at all, which on the same Wi-Fi is the difference between a few
  * milliseconds and a few tens of milliseconds of lag between the words on the
  * display and the words on the remote.
  *
- * If it fails — symmetric NAT, a locked-down network, no STUN reachability —
+ * If it fails (symmetric NAT, a locked-down network, no STUN reachability),
  * nothing breaks. `link.ts` keeps using the relay, and the only observable
  * difference is the connection badge reading "relay" instead of "direct".
  *

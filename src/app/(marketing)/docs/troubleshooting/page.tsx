@@ -38,10 +38,10 @@ export default function Page() {
       <ul>
         <li>
           <strong>The room ended.</strong> Rooms close after five quiet minutes
-          — nothing attached to them, and the room page neither open nor in
-          front of you — and release their code. Open a new session from the
-          script. Leaving the room page up and visible while you fetch the other
-          device is what keeps this from happening.
+          (nothing attached to them, and the room page neither open nor in front
+          of you) and release their code. Open a new session from the script.
+          Leaving the room page up and visible while you fetch the other device
+          is what keeps this from happening.
         </li>
         <li>
           <strong>Different accounts.</strong> The second device is signed in as
@@ -91,7 +91,7 @@ export default function Page() {
       </ul>
       <p>
         Beyond that, direct routes on genuinely hostile networks need a TURN
-        server, which the hosted instance does not run — it is on the list of{" "}
+        server, which the hosted instance does not run; it is on the list of{" "}
         <Link href="/docs/contributing">things worth contributing</Link>.
       </p>
 
@@ -124,7 +124,7 @@ export default function Page() {
           a second of returning.
         </li>
         <li>
-          If they are on genuinely different text — one shows an old version —
+          If they are on genuinely different text (one shows an old version),
           the room snapshot and the script have diverged. Open the room page and
           pull the edits in.
         </li>
@@ -156,7 +156,7 @@ export default function Page() {
       </p>
       <p>
         If the reflection is upside down rather than backwards, you want{" "}
-        <strong>Flip</strong> as well — that is the face-up-under-glass
+        <strong>Flip</strong> as well; that is the face-up-under-glass
         configuration.
       </p>
 
@@ -204,9 +204,8 @@ export default function Page() {
           If you are self-hosting, check that{" "}
           <code>NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
           <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> are set in the{" "}
-          <em>build</em> environment — they are inlined at build time, so
-          setting them only at runtime leaves the client with nothing to connect
-          to.
+          <em>build</em> environment: they are inlined at build time, so setting
+          them only at runtime leaves the client with nothing to connect to.
         </li>
       </ol>
 
@@ -227,7 +226,7 @@ export default function Page() {
         Supabase&rsquo;s transaction pooler on port 6543 is the right choice for
         the app and the wrong one for the Drizzle CLI. The CLI introspects by
         firing a burst of small per-table queries, and on that pooler some
-        answers come back matched to the wrong question — the check-constraint
+        answers come back matched to the wrong question: the check-constraint
         reader is handed a row from the foreign-key query, which has no
         definition to read. It only becomes fatal once the schema contains a
         single <code>CHECK</code> constraint anywhere, because until then that

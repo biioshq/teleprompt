@@ -12,7 +12,7 @@ import { ScriptPreview } from "~/components/app/script-preview";
 
 /**
  * A cue is Teleprompt's one addition to Markdown: a line starting with `::` is
- * a note to the reader — "look at camera", "wait for the slide" — shown on the
+ * a note to the reader ("look at camera", "wait for the slide"), shown on the
  * prompter in orange and excluded from the word count, because nobody says it
  * out loud.
  */
@@ -21,7 +21,7 @@ const cueCommand: ICommand = {
   keyCommand: "cue",
   buttonProps: {
     "aria-label": "Insert a cue",
-    title: "Cue — shown on the prompter, never read aloud",
+    title: "Cue: shown on the prompter, never read aloud",
   },
   icon: (
     <span

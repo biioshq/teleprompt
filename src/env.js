@@ -2,8 +2,8 @@ import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
 /**
- * `AUTH_SECRET` is genuinely load-bearing — without it, sessions are not
- * signed — so it is mandatory in production.
+ * `AUTH_SECRET` is genuinely load-bearing (without it, sessions are not
+ * signed), so it is mandatory in production.
  */
 const requiredInProduction =
   process.env.NODE_ENV === "production" ? z.string() : z.string().optional();
@@ -26,7 +26,7 @@ export const env = createEnv({
      * Optional. A session-mode connection, used only by the Drizzle CLI.
      *
      * The app wants the transaction pooler; `drizzle-kit` cannot use it. See
-     * the comment in `drizzle.config.ts` — if that file's automatic
+     * the comment in `drizzle.config.ts`. If that file's automatic
      * substitution does not fit your setup, set this and it wins.
      */
     DIRECT_DATABASE_URL: z.string().url().optional(),

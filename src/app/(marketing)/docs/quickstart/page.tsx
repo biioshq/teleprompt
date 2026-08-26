@@ -31,7 +31,7 @@ export default function Page() {
       <h2 id="before">Before you start</h2>
       <p>
         You need two things: a Google or GitHub account, and two devices you can
-        sign into with it. That is the entire pairing model — a room is the set
+        sign into with it. That is the entire pairing model: a room is the set
         of devices signed in as you, so there is no invite to send and no link
         to leak.
       </p>
@@ -58,7 +58,7 @@ export default function Page() {
           remote steps through.
         </li>
         <li>
-          <code>:: cue</code> is a note to yourself — shown in orange on the
+          <code>:: cue</code> is a note to yourself, shown in orange on the
           prompter, never counted as a spoken word.
         </li>
         <li>
@@ -104,11 +104,11 @@ export default function Page() {
       </p>
       <ul>
         <li>
-          <strong>Direct</strong> — a WebRTC data channel straight between the
+          <strong>Direct</strong>: a WebRTC data channel straight between the
           devices. Nothing sits in between.
         </li>
         <li>
-          <strong>Relay</strong> — no direct route was possible, so messages go
+          <strong>Relay</strong>: no direct route was possible, so messages go
           through the realtime relay. Everything still works.
         </li>
       </ul>
@@ -116,7 +116,7 @@ export default function Page() {
       <h2 id="read">4. Read</h2>
       <p>
         Press play on the phone. The display starts scrolling, and the phone
-        shows you the same words moving at the same rate — laid out for a phone,
+        shows you the same words moving at the same rate, laid out for a phone,
         not shrunk down from the display.
       </p>
       <p>While you are reading, the remote can:</p>
@@ -126,7 +126,7 @@ export default function Page() {
         <li>Tap any visible line to jump the display straight to it.</li>
         <li>Drag the text to scrub, exactly like a scroll wheel.</li>
         <li>
-          Change type size, mirroring and the reading surface — on the display,
+          Change type size, mirroring and the reading surface on the display,
           from your hand.
         </li>
       </ul>
@@ -134,19 +134,19 @@ export default function Page() {
       <h2 id="next">Where to go next</h2>
       <ul>
         <li>
-          <Link href="/docs/writing-scripts">Writing scripts</Link> — everything
+          <Link href="/docs/writing-scripts">Writing scripts</Link>: everything
           the editor understands.
         </li>
         <li>
-          <Link href="/docs/remote-control">The remote</Link> — every control on
+          <Link href="/docs/remote-control">The remote</Link>: every control on
           the phone.
         </li>
         <li>
-          <Link href="/docs/install">Install as an app</Link> — put it on the
+          <Link href="/docs/install">Install as an app</Link>: put it on the
           home screen so it opens full screen.
         </li>
         <li>
-          <Link href="/docs/architecture">Architecture</Link> — what actually
+          <Link href="/docs/architecture">Architecture</Link>: what actually
           travels between the two devices.
         </li>
       </ul>

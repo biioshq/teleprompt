@@ -75,7 +75,7 @@ export function RemoteClient({ roomId }: { roomId: string }) {
 
   /**
    * Held here rather than inside the stage on purpose. A room that is over has
-   * to take the stage down with it — the engine, the realtime link, the wake
+   * to take the stage down with it: the engine, the realtime link, the wake
    * lock and the heartbeat all live below this line, and a message painted
    * over the top of them would leave every one of them running against a room
    * that no longer exists.
@@ -144,7 +144,7 @@ function RemoteStage({
    * The remote deliberately does *not* render at the display's type size. It
    * shows the same words, laid out for a phone in the hand. This is only
    * possible because devices agree on a text anchor rather than a scroll
-   * offset — see `lib/prompter/state.ts`.
+   * offset; see `lib/prompter/state.ts`.
    *
    * The size still tracks the room's setting, scaled: resize from either
    * device and both move together.
@@ -171,8 +171,8 @@ function RemoteStage({
     onEnded,
     deriveViewState,
     /**
-     * The remote never listens — it is not the device the reader is speaking
-     * in front of — but it does show which words have been said, which it can
+     * The remote never listens (it is not the device the reader is speaking
+     * in front of), but it does show which words have been said, which it can
      * derive from the position it is already following. Always rendered, so
      * the display arming its microphone mid-take does not rebuild the mirror.
      */
@@ -213,7 +213,7 @@ function RemoteStage({
   const [voicePending, setVoicePending] = useState(false);
   const [voiceRefused, setVoiceRefused] = useState(false);
   useEffect(() => {
-    // Confirmed — including when the display was started from its own screen
+    // Confirmed, including when the display was started from its own screen
     // after this remote had given up waiting.
     if (state.voiceTracking) {
       setVoicePending(false);

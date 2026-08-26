@@ -13,7 +13,7 @@ import { cn } from "~/lib/utils";
  *
  * Extracted from the canvas so the editor's preview can render through the
  * same code rather than through plain Markdown. A cue is Teleprompt's own
- * addition to the syntax, and plain Markdown has no idea what `::` means — it
+ * addition to the syntax, and plain Markdown has no idea what `::` means; it
  * showed the line as an ordinary paragraph, so the preview disagreed with the
  * prompter about the one piece of syntax the product invented. Sharing the
  * renderer is the only way to keep them honest: there is now no second
@@ -75,7 +75,7 @@ export const BlockView = memo(function BlockView({
    * it up.
    *
    * Deliberately not applied to cues or code. Neither is ever read aloud, and
-   * the word list has to be exactly the spoken script — a cue counted as words
+   * the word list has to be exactly the spoken script: a cue counted as words
    * would put every mark after it one line out.
    */
   words?: boolean;
@@ -84,7 +84,7 @@ export const BlockView = memo(function BlockView({
    *
    * True on a prompter, where exactly one line is being read and the rest
    * should get out of the way. False in the editor's preview, which has no
-   * reading line — everything there is equally "now", and dimming all of it
+   * reading line; everything there is equally "now", and dimming all of it
    * would just make the whole pane grey.
    */
   dimmed?: boolean;

@@ -175,7 +175,7 @@ export function ScriptEditor({ scriptId }: { scriptId: string }) {
               {access === "editor" ? "Editor" : "View only"}
             </Badge>
             <span className="text-[0.75rem] text-faint">
-              Shared with you — this is not your copy.
+              Shared with you: this is not your copy.
             </span>
           </span>
         )}
@@ -234,7 +234,7 @@ export function ScriptEditor({ scriptId }: { scriptId: string }) {
               <>
                 <CloudSlash size={13} weight="bold" className="text-coral" />
                 <span className="text-coral">
-                  Could not save — check your connection
+                  Could not save: check your connection
                 </span>
               </>
             ) : dirty ? (
@@ -299,7 +299,7 @@ export function ScriptEditor({ scriptId }: { scriptId: string }) {
             <p className="-mt-3 text-[0.75rem] leading-relaxed text-faint">
               {readOnly
                 ? "This script is empty, so there is nothing to present yet."
-                : "Write something first — an empty script has nothing to scroll."}
+                : "Write something first: an empty script has nothing to scroll."}
             </p>
           ) : null}
 

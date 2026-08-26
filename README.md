@@ -35,19 +35,19 @@ same text, set for a phone.
 
 ## Features
 
-|                              |                                                                                                                                                                                                                                               |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Markdown editor**          | Headings, lists, quotes, tables, and cues — `:: look at camera` — which show on the prompter and are never counted as spoken words.                                                                                                           |
-| **Pace in words per minute** | Not pixels per second. 130 wpm is the same delivery speed on a phone and a 27-inch display.                                                                                                                                                   |
-| **Tap to jump**              | Tap any line on the remote and the display goes there. Drag to scrub.                                                                                                                                                                         |
-| **Mirror and flip**          | For beam-splitter glass and overhead rigs. Toggle from either device, mid-take.                                                                                                                                                               |
-| **Three surfaces**           | Night, amber and paper.                                                                                                                                                                                                                       |
-| **Keyboard first**           | Space to roll, arrows to step and change pace, `F` fullscreen, `M` mirror. Presenter clickers work without setup.                                                                                                                             |
-| **Stays awake**              | The display holds a screen wake lock.                                                                                                                                                                                                         |
-| **Resumes**                  | Position is persisted, so a reload lands within a sentence of where you were.                                                                                                                                                                 |
-| **Folders and sharing**      | Nest scripts into folders, and share a script or a whole folder with an email address as **view only** or **editor**. Access inherits down the tree; view-only can still present. See `/docs/folders-and-sharing`.                            |
-| **More than two devices**    | A second display for a co-host, a second remote for a producer. One device drives; the rest follow.                                                                                                                                           |
-| **Voice tracking**           | _Experimental, off by default._ The display listens, greys out the words you have said and scrolls to keep up. Uses the browser's own speech recognition — no API key, nothing added to a self-hosted deployment. See `/docs/voice-tracking`. |
+|                              |                                                                                                                                                                                                                                              |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Markdown editor**          | Headings, lists, quotes, tables, and cues (`:: look at camera`), which show on the prompter and are never counted as spoken words.                                                                                                           |
+| **Pace in words per minute** | Not pixels per second. 130 wpm is the same delivery speed on a phone and a 27-inch display.                                                                                                                                                  |
+| **Tap to jump**              | Tap any line on the remote and the display goes there. Drag to scrub.                                                                                                                                                                        |
+| **Mirror and flip**          | For beam-splitter glass and overhead rigs. Toggle from either device, mid-take.                                                                                                                                                              |
+| **Three surfaces**           | Night, amber and paper.                                                                                                                                                                                                                      |
+| **Keyboard first**           | Space to roll, arrows to step and change pace, `F` fullscreen, `M` mirror. Presenter clickers work without setup.                                                                                                                            |
+| **Stays awake**              | The display holds a screen wake lock.                                                                                                                                                                                                        |
+| **Resumes**                  | Position is persisted, so a reload lands within a sentence of where you were.                                                                                                                                                                |
+| **Folders and sharing**      | Nest scripts into folders, and share a script or a whole folder with an email address as **view only** or **editor**. Access inherits down the tree; view-only can still present. See `/docs/folders-and-sharing`.                           |
+| **More than two devices**    | A second display for a co-host, a second remote for a producer. One device drives; the rest follow.                                                                                                                                          |
+| **Voice tracking**           | _Experimental, off by default._ The display listens, greys out the words you have said and scrolls to keep up. Uses the browser's own speech recognition: no API key, nothing added to a self-hosted deployment. See `/docs/voice-tracking`. |
 
 ## Stack
 
@@ -63,7 +63,7 @@ git clone https://github.com/biioshq/teleprompt.git
 cd teleprompt
 npm install
 cp .env.example .env
-# fill in .env — see below
+# fill in .env (see below)
 npm run db:push
 npm run dev
 ```
@@ -118,7 +118,7 @@ policies to write.
 ```bash
 npm run dev        # dev server (turbo)
 npm run build      # production build
-npm run preview    # build, then serve — the service worker only runs here
+npm run preview    # build, then serve; the service worker only runs here
 npm run typecheck  # tsc --noEmit, strict
 npm test           # node --test; the permission rules are pinned here
 npm run format     # prettier
@@ -153,7 +153,7 @@ negotiate a WebRTC data channel and move the position updates onto it. Sending
 falls back per peer: anyone the direct path cannot reach is covered by the
 relay, and receivers deduplicate on `(from, seq)`.
 
-Exactly one device drives — the display connected longest, decided from the
+Exactly one device drives: the display connected longest, decided from the
 presence list so both sides reach the same answer with no round trip. Followers
 dead-reckon between the ~10Hz updates and ease toward the prediction, which is
 what turns 10Hz data into 60fps motion.
@@ -235,7 +235,7 @@ hostname.
 ## Self-hosting
 
 It is a standard Next.js App Router application with no edge-only or
-platform-specific code, so anywhere that runs Next works. Serve over HTTPS —
+platform-specific code, so anywhere that runs Next works. Serve over HTTPS:
 WebRTC, the service worker and the wake lock all need a secure context.
 
 ## Contributing
@@ -254,7 +254,7 @@ pass on the prompter surface.
 
 ## Security
 
-Report vulnerabilities privately — see `SECURITY.md`.
+Report vulnerabilities privately; see `SECURITY.md`.
 
 ## Licence
 

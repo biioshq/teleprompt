@@ -9,7 +9,7 @@ import {
 import { env } from "~/env";
 
 /**
- * Teleprompt does not use Supabase Auth — sign-in is Auth.js + Google, and the
+ * Teleprompt does not use Supabase Auth: sign-in is Auth.js + Google, and the
  * Postgres tables are reached through tRPC on the server. The browser client
  * exists for exactly one job: Realtime.
  *

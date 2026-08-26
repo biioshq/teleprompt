@@ -225,7 +225,7 @@ export function SyncExplainer() {
 /**
  * The demo is a static picture of a real mechanism, not a fake of one: the
  * words before the cursor carry the same dimming the prompter applies, and the
- * marker under the next word is the same rule colour. Nothing here animates —
+ * marker under the next word is the same rule colour. Nothing here animates:
  * a looping mock of a feature that depends on your microphone would be a
  * promise the page is not in a position to make.
  */
@@ -250,7 +250,7 @@ export function VoiceSection() {
 
           <p className="mt-6 max-w-md text-[1rem] leading-relaxed text-ink-soft">
             Turn on voice tracking and the display listens. Words go grey as you
-            say them, and the script moves when you move — not at 130 words a
+            say them, and the script moves when you move, not at 130 words a
             minute, not at whatever you guessed before you started. Pause to
             take a question and it waits. Skip a sentence and it skips with you.
           </p>
@@ -265,7 +265,7 @@ export function VoiceSection() {
               {
                 icon: Microphone,
                 title: "In the browser, with no account anywhere",
-                body: "It uses the speech recognition already built into Chrome, Edge and Safari. There is no key to get and no service to sign up for — including for anyone running their own copy.",
+                body: "It uses the speech recognition already built into Chrome, Edge and Safari. There is no key to get and no service to sign up for, including for anyone running their own copy.",
               },
               {
                 icon: DeviceMobile,
@@ -339,7 +339,7 @@ export function VoiceSection() {
           <p className="mt-4 text-[0.8125rem] leading-relaxed text-muted">
             Recognition is your browser&rsquo;s, not ours. In Chrome and Edge
             that means the audio goes to the browser vendor&rsquo;s speech
-            service — it never reaches Teleprompt, and nothing is recorded or
+            service; it never reaches Teleprompt, and nothing is recorded or
             stored. If that is not a trade you want to make, leave it off:
             everything else works exactly as it did.
           </p>

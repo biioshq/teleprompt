@@ -41,8 +41,8 @@ const bebas = Bebas_Neue({
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
   title: {
-    default: `${SITE.name} — ${SITE.tagline}`,
-    template: `%s — ${SITE.name}`,
+    default: `${SITE.name}: ${SITE.tagline}`,
+    template: `%s | ${SITE.name}`,
   },
   description: SITE.description,
   applicationName: SITE.name,
@@ -62,12 +62,12 @@ export const metadata: Metadata = {
     type: "website",
     url: getSiteUrl(),
     siteName: SITE.name,
-    title: `${SITE.name} — ${SITE.tagline}`,
+    title: `${SITE.name}: ${SITE.tagline}`,
     description: SITE.description,
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SITE.name} — ${SITE.tagline}`,
+    title: `${SITE.name}: ${SITE.tagline}`,
     description: SITE.description,
   },
   appleWebApp: {

@@ -18,7 +18,7 @@ import { env } from "~/env";
  * That is the check-constraint reader being handed a row from the foreign-key
  * query, which has no definition column. It only becomes fatal once the schema
  * contains a single CHECK constraint anywhere, because until then that loop
- * never runs — so it appears the day you add one and looks like your fault.
+ * never runs, so it appears the day you add one and looks like your fault.
  *
  * Session mode on 5432 keeps one connection for the whole run and the answers
  * stay with their questions. Same host, same credentials, same database; only

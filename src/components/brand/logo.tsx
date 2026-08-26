@@ -2,7 +2,7 @@ import { cn } from "~/lib/utils";
 
 /**
  * The mark: three lines of a script, with the one on the reading line lit in
- * Biios orange and running off the edge of the frame — the line being read is
+ * Biios orange and running off the edge of the frame; the line being read is
  * also the line being sent to the other device.
  */
 export function Mark({
@@ -103,7 +103,7 @@ export function Logo({
           /* The stack holds the lockup's line-height, not the two lines
              themselves. `cn` merges a caller's `wordmarkClassName` over the
              wordmark's own classes, and tailwind-merge counts a font size as
-             replacing a leading — Tailwind sizes carry one — so a caller who
+             replacing a leading (Tailwind sizes carry one), so a caller who
              only meant to ask for a bigger wordmark takes its `leading-none`
              away with them. That is how the two headers ended up drawing two
              different lockups from the same component. Set here it is
@@ -118,8 +118,8 @@ export function Logo({
       >
         {/* The gap that keeps the wordmark's descenders off `by biios`. It has
             to be here rather than on the byline, and in `em` rather than in
-            pixels, because the thing it is clearing — how far the `p` of
-            `teleprompt` drops below its own line box — scales with the
+            pixels, because the thing it is clearing (how far the `p` of
+            `teleprompt` drops below its own line box) scales with the
             wordmark, which the caller sizes, and not with the byline, which is
             a fixed size.
 

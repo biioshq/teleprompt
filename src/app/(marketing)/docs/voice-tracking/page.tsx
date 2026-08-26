@@ -45,7 +45,7 @@ export default function Page() {
       <p>
         The first time you press it the browser asks for permission to use the
         microphone. If you refuse, or have refused before, the readout under the
-        script says so and voice tracking switches itself back off — the
+        script says so and voice tracking switches itself back off; the
         permission has to be changed in the browser&rsquo;s own site settings,
         not here.
       </p>
@@ -67,8 +67,8 @@ export default function Page() {
         </li>
         <li>
           A small orange rule sits under the next word out. It is deliberately
-          not a highlight — a block of colour under the word you are about to
-          say is precisely where you do not want your eye pulled.
+          not a highlight: a block of colour under the word you are about to say
+          is precisely where you do not want your eye pulled.
         </li>
         <li>
           A strip under the script shows the last few words the display heard,
@@ -94,8 +94,8 @@ export default function Page() {
 
       <h2 id="how">How it finds your place</h2>
       <p>
-        The obvious approach — remember the last word matched, compare the next
-        word heard to the next word written — falls apart on the first line of
+        The obvious approach (remember the last word matched, compare the next
+        word heard to the next word written) falls apart on the first line of
         real use. People skip words, add words, say &ldquo;and&rdquo; where the
         page says &ldquo;&amp;&rdquo;, and recognition mishears roughly one word
         in ten. Any of those desynchronises a simple pointer permanently.
@@ -116,7 +116,7 @@ export default function Page() {
       </p>
       <p>
         If nothing matches for about four seconds, it assumes you are somewhere
-        else entirely and searches the whole script instead — at a much higher
+        else entirely and searches the whole script instead, at a much higher
         bar for certainty, because moving you to the wrong page is worse than
         not moving you at all. That is what lets you jump to a different section
         mid-take: say a few words from it and it will find you.
@@ -124,7 +124,7 @@ export default function Page() {
 
       <h2 id="remote">From the remote</h2>
       <p>
-        The remote has a microphone button too. It does not listen — the
+        The remote has a microphone button too. It does not listen; the
         microphone stays on the display, which is the device the person speaking
         is standing in front of. The button asks the display to start and stop.
       </p>
@@ -151,7 +151,7 @@ export default function Page() {
         <strong>Chrome and Edge</strong> stream the audio to their
         vendor&rsquo;s speech service and return text. <strong>Safari</strong>{" "}
         does more of the work on the device. In neither case does the audio
-        reach a Teleprompt server, and in neither case is a transcript stored —
+        reach a Teleprompt server, and in neither case is a transcript stored;
         the words are matched against your script in the page and discarded.
       </p>
       <p>
@@ -170,7 +170,7 @@ export default function Page() {
           to.
         </li>
         <li>
-          <strong>Languages written without spaces</strong> — Chinese, Japanese,
+          <strong>Languages written without spaces</strong>: Chinese, Japanese,
           Thai. The matching works on whitespace-separated words, so scripts in
           those languages will not track well. The language picker is in the
           display&rsquo;s settings and is set per device.

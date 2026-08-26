@@ -24,8 +24,8 @@ export default function TermsPage() {
         <p>
           These terms cover the hosted version of {SITE.name} at this domain,
           provided by {BIIOS.name} ({BIIOS.city}). The software itself is
-          separately licensed under the {SITE.license} licence — see{" "}
-          <Link href="/open-source">Open source</Link> — and if you run your own
+          separately licensed under the {SITE.license} licence (see{" "}
+          <Link href="/open-source">Open source</Link>), and if you run your own
           instance, only that licence applies.
         </p>
 
@@ -67,7 +67,7 @@ export default function TermsPage() {
             data.
           </li>
           <li>
-            Do not attack the service — no automated abuse, no attempts to
+            Do not attack the service: no automated abuse, no attempts to
             degrade it for other people.
           </li>
           <li>
@@ -83,8 +83,8 @@ export default function TermsPage() {
         <h2 id="availability">Availability</h2>
         <p>
           The hosted instance is offered as it is, with no uptime commitment.
-          For anything where downtime would be costly — a live broadcast, a paid
-          shoot — run your own instance. The code is public and the setup takes
+          For anything where downtime would be costly (a live broadcast, a paid
+          shoot), run your own instance. The code is public and the setup takes
           about ten minutes.
         </p>
         <p>
@@ -118,13 +118,13 @@ export default function TermsPage() {
         <h2 id="law">Governing law</h2>
         <p>
           These terms are governed by the laws of India, and the courts of Pune,
-          Maharashtra have exclusive jurisdiction — without affecting any
+          Maharashtra have exclusive jurisdiction, without affecting any
           mandatory consumer protections available to you where you live.
         </p>
 
         <h2 id="contact">Contact</h2>
         <p>
-          {BIIOS.name}, {BIIOS.city} —{" "}
+          {BIIOS.name}, {BIIOS.city}:{" "}
           <a href={BIIOS.contact} rel="noreferrer noopener">
             biios.in/contact
           </a>

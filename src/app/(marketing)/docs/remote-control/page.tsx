@@ -31,7 +31,7 @@ export default function Page() {
       <h2 id="mirror">The mirror</h2>
       <p>
         Most of the remote is a copy of the script, moving in step with the
-        display. It is not a scaled-down screenshot — it is the same text laid
+        display. It is not a scaled-down screenshot; it is the same text laid
         out for a phone, at a type size you choose with the two buttons in the
         corner.
       </p>
@@ -69,7 +69,7 @@ export default function Page() {
           <tr>
             <td>Half screen</td>
             <td>
-              Skips forward half a screen — for a paragraph you decided to cut.
+              Skips forward half a screen: for a paragraph you decided to cut.
             </td>
           </tr>
           <tr>
@@ -137,8 +137,8 @@ export default function Page() {
         own phone mid-session and land exactly where you are.
       </p>
       <p>
-        Playback itself is always driven by one device — the display that has
-        been connected longest — so there is never a moment where two devices
+        Playback itself is always driven by one device (the display that has
+        been connected longest), so there is never a moment where two devices
         disagree about where the script is.
       </p>
     </DocPage>

@@ -8,9 +8,9 @@ import { type Command } from "~/lib/realtime/protocol";
 const FLUSH_INTERVAL_MS = 40;
 
 /**
- * Scrubbing by hand produces pointer events at display refresh rate. Sending a
- * command per event would push 60 messages a second at the relay, and the
- * driver echoes a state broadcast for each one — so deltas are accumulated and
+ * Scrubbing by hand produces pointer events at display refresh rate. Sending
+ * a command per event would push 60 messages a second at the relay, and the
+ * driver echoes a state broadcast for each one. So deltas are accumulated and
  * flushed on a fixed interval instead. 40ms keeps both directions comfortably
  * inside the channel's rate limit while still feeling continuous.
  *
@@ -66,7 +66,7 @@ export function useScrub({
   const endGesture = useCallback(() => {
     if (timer.current !== null) {
       window.clearTimeout(timer.current);
-      // The tail of a flick matters — never drop the last few pixels.
+      // The tail of a flick matters: never drop the last few pixels.
       flush();
     }
     if (!optimistic.current) return;

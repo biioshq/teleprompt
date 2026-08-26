@@ -10,7 +10,7 @@ import { api } from "~/trpc/react";
  * Loads the room and registers this browser as one of its devices.
  *
  * `byId` is the only endpoint that returns the room's channel key, and it is
- * scoped to the owning account — so a device that is not signed in as the same
+ * scoped to the owning account, so a device that is not signed in as the same
  * person simply cannot obtain the secret that names the realtime channel.
  */
 export function useRoomBootstrap(roomId: string, role: Role) {

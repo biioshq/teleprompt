@@ -8,7 +8,7 @@ import { summarise } from "./blocks.ts";
  *
  * A card shows the script without rendering it, so it is the one surface where
  * a mark that survives is a mark somebody reads. These assertions are the list
- * of marks that must not survive — and, just as importantly, the characters
+ * of marks that must not survive, and, just as importantly, the characters
  * that are not marks at all and must be left alone. Run with `npm test`.
  */
 

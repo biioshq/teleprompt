@@ -12,7 +12,7 @@ import { cn } from "~/lib/utils";
  *
  * The point of a preview is to answer "what will this look like", and the
  * editor's built-in one could not: it renders plain Markdown, and cues are not
- * Markdown. A line beginning with `::` came out as an ordinary paragraph — so
+ * Markdown. A line beginning with `::` came out as an ordinary paragraph, so
  * the one piece of syntax this product invented was the one piece the preview
  * got wrong, and the words you are never going to say looked exactly like the
  * words you are.
@@ -54,8 +54,8 @@ export function ScriptPreview({
       }
     >
       <div
-        // The type is smaller than a real display's — this is a page being
-        // read at desk distance, not a lens away — but everything is sized in
+        // The type is smaller than a real display's (this is a page being
+        // read at desk distance, not a lens away), but everything is sized in
         // `em`, so the proportions between a heading, a cue and a line of
         // script are the ones that will be on the screen.
         className="mx-auto max-w-[42rem] px-6 py-8"

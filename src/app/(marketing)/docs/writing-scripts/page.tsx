@@ -96,7 +96,7 @@ export default function Page() {
               <code>[text](url)</code>
             </td>
             <td>
-              Underlined text. Links are never clickable on the prompter — a
+              Underlined text. Links are never clickable on the prompter: a
               stray tap mid-take should not open a browser.
             </td>
           </tr>
@@ -118,13 +118,13 @@ export default function Page() {
 
       <h2 id="cues">Cues</h2>
       <p>
-        A line that begins with two colons is a <strong>cue</strong> — a
+        A line that begins with two colons is a <strong>cue</strong>, a
         direction to yourself rather than something you say:
       </p>
       <pre>
         <code>{`Thank you all for coming.
 
-:: pause — wait for the room to settle
+:: pause, wait for the room to settle
 
 There is one thing I want to leave you with.`}</code>
       </pre>
@@ -163,7 +163,7 @@ There is one thing I want to leave you with.`}</code>
 
       <h2 id="pace">Words, pace and timing</h2>
       <p>
-        The word count excludes cues, code and table markup — it is meant to be
+        The word count excludes cues, code and table markup; it is meant to be
         the number of words you will actually say. The estimate in the sidebar
         uses 130 words per minute, which is a measured speaking pace, not a
         reading pace.

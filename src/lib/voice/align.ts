@@ -1,8 +1,8 @@
 /**
  * Finding the spoken words in the written script.
  *
- * The naive version of this — remember the last matched word, compare the next
- * heard word to the next written one — falls apart on the first line of real
+ * The naive version of this (remember the last matched word, compare the next
+ * heard word to the next written one) falls apart on the first line of real
  * use. People skip words, add words, say "and" where the page says "&", and
  * the recogniser mishears roughly one word in ten. Any of those desynchronises
  * a pointer permanently.
@@ -104,7 +104,7 @@ export type Alignment = {
 /**
  * Best local alignment of `spoken` against `script[from, to)`.
  *
- * Only the score row is kept — the alignment path itself is never needed, just
+ * Only the score row is kept: the alignment path itself is never needed, just
  * where it ended, which is the reader's position.
  *
  * Selection is nudged toward alignments that consume more of the phrase. Two
@@ -171,7 +171,7 @@ export function alignPhrase(
 const HISTORY = 60;
 /** How many of them are matched. Longer is steadier; shorter is quicker. */
 const PHRASE = 12;
-/** Tokens behind the cursor the window reaches — enough to restart a sentence. */
+/** Tokens behind the cursor the window reaches, enough to restart a sentence. */
 const LOOK_BEHIND = 16;
 /** Tokens ahead. A skipped sentence is recoverable; a skipped page is not. */
 const LOOK_AHEAD = 80;
@@ -191,7 +191,7 @@ const LOST_AFTER_MS = 4000;
 export type TrackerUpdate = {
   /** Index into the script tokens, exclusive: everything before it was said. */
   cursor: number;
-  /** How many rendered words that is — what the display lights up. */
+  /** How many rendered words that is: what the display lights up. */
   spokenWords: number;
   moved: boolean;
   /** True when the last phrase could not be placed at all. */
@@ -222,7 +222,7 @@ export class VoiceTracker {
     this.wordCount = wordCount;
   }
 
-  /** Place the reader by hand — used when someone scrubs or taps a line. */
+  /** Place the reader by hand. Used when someone scrubs or taps a line. */
   reset(word: number, now: number) {
     const clamped = Math.min(Math.max(0, word), this.wordCount);
     this.cursor = this.tokenForWord(clamped);
@@ -231,7 +231,7 @@ export class VoiceTracker {
     this.lastMatchAt = now;
   }
 
-  /** The first token belonging to a rendered word — the two are not one to one. */
+  /** The first token belonging to a rendered word. The two are not one to one. */
   private tokenForWord(word: number): number {
     if (word >= this.wordCount) return this.script.length;
     let low = 0;

@@ -20,12 +20,12 @@ export type SelectOption<T extends string> = {
 /**
  * A select that stays inside the design system.
  *
- * A native `<select>` cannot: the option list is drawn by the operating
- * system, so a menu on a warm paper panel arrives in whatever grey the
- * platform feels like, and the caret is painted inside the control's own
- * padding box with no room left after it. This is the APG select-only
- * combobox — a button that owns its caret and a listbox we paint ourselves —
- * so the open state reads as part of the same surface as the closed one.
+ * A native `<select>` cannot: the option list is drawn by the operating system,
+ * so a menu on a warm paper panel arrives in whatever grey the platform feels
+ * like, and the caret is painted inside the control's own padding box with no
+ * room left after it. This is the APG select-only combobox (a button that owns
+ * its caret and a listbox we paint ourselves), so the open state reads as part
+ * of the same surface as the closed one.
  *
  * Focus never leaves the button; the active option is named by
  * `aria-activedescendant`, which is what a screen reader announces as the
@@ -108,7 +108,7 @@ export function Select<T extends string>({
   }, []);
 
   /* Placed in a layout effect so the menu is measured and moved before the
-     browser paints it — hence `visibility: hidden` until an anchor exists.
+     browser paints it; hence `visibility: hidden` until an anchor exists.
      Dropping the anchor on close forces a fresh measure on the next open. */
   useLayoutEffect(() => {
     if (!open) {

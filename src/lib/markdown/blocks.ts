@@ -41,7 +41,7 @@ export type Block =
     }
   | { kind: "table"; index: number; source: string; words: number }
   | { kind: "rule"; index: number; source: string; words: number }
-  /** `:: look at camera` — a director's note. Never read aloud. */
+  /** `:: look at camera`: a director's note. Never read aloud. */
   | { kind: "cue"; index: number; source: string; words: number };
 
 export type BlockKind = Block["kind"];
@@ -92,7 +92,7 @@ export function splitIntoBlocks(markdown: string): Block[] {
       continue;
     }
 
-    // Fenced code — consumed whole so an internal `---` is not read as a rule.
+    // Fenced code: consumed whole so an internal `---` is not read as a rule.
     const fence = FENCE.exec(line);
     if (fence) {
       const marker = fence[1] ?? "```";
@@ -143,7 +143,7 @@ export function splitIntoBlocks(markdown: string): Block[] {
       continue;
     }
 
-    // Blockquote — contiguous `>` lines collapse into one spoken chunk.
+    // Blockquote: contiguous `>` lines collapse into one spoken chunk.
     if (QUOTE.test(line)) {
       const body: string[] = [];
       while (cursor < lines.length) {
@@ -158,7 +158,7 @@ export function splitIntoBlocks(markdown: string): Block[] {
       continue;
     }
 
-    // Table — the whole grid is one block; you do not read a table line by line.
+    // Table: the whole grid is one block; you do not read a table line by line.
     if (TABLE_ROW.test(line)) {
       const body: string[] = [];
       while (cursor < lines.length && TABLE_ROW.test(lines[cursor] ?? "")) {
@@ -170,7 +170,7 @@ export function splitIntoBlocks(markdown: string): Block[] {
       continue;
     }
 
-    // List items — one block each, so a remote can step bullet by bullet.
+    // List items: one block each, so a remote can step bullet by bullet.
     const unordered = UNORDERED_ITEM.exec(line);
     const ordered = ORDERED_ITEM.exec(line);
     if (unordered ?? ordered) {
@@ -209,7 +209,7 @@ export function splitIntoBlocks(markdown: string): Block[] {
       continue;
     }
 
-    // Paragraph — contiguous plain lines.
+    // Paragraph: contiguous plain lines.
     const body: string[] = [];
     while (cursor < lines.length) {
       const current = lines[cursor] ?? "";
@@ -238,7 +238,7 @@ export function splitIntoBlocks(markdown: string): Block[] {
   return blocks;
 }
 
-/** Total spoken words — cues and code are excluded, they are never read out. */
+/** Total spoken words: cues and code are excluded, they are never read out. */
 export function spokenWordCount(blocks: Block[]): number {
   return blocks.reduce((total, block) => total + block.words, 0);
 }
@@ -267,17 +267,17 @@ export function inferTitle(markdown: string, fallback = "Untitled script") {
  *
  * A card is the one place a script is shown without being rendered, so every
  * mark in it has to be resolved here rather than left to `react-markdown`.
- * What used to do that was a character class — every #, >, *, _, backtick and
- * hyphen swapped for a space — and it was wrong in both directions at once,
+ * What used to do that was a character class (every #, >, *, _, backtick and
+ * hyphen swapped for a space), and it was wrong in both directions at once,
  * cutting marks that were not there and leaving the ones that were. It took
- * the hyphen out of
- * "peer-to-peer" and the underscore out of `snake_case`; it left `[text](url)`
- * carrying its brackets and its URL, and a table as a fence of pipes. Worst of
- * all it left cues, because `::` was never in the class: a card could open with
- * a director's note, which is exactly the text nobody is meant to read.
+ * the hyphen out of "peer-to-peer" and the underscore out of `snake_case`; it
+ * left `[text](url)` carrying its brackets and its URL, and a table as a
+ * fence of pipes. Worst of all it left cues, because `::` was never in the
+ * class: a card could open with a director's note, which is exactly the text
+ * nobody is meant to read.
  *
  * So this runs the same splitter the prompter does. The blocks that are never
- * spoken — cues, code, section breaks — are the blocks a summary leaves out,
+ * spoken (cues, code, section breaks) are the blocks a summary leaves out,
  * and the two agree by construction rather than by two lists of exceptions
  * that somebody has to remember to keep in step.
  */
@@ -298,7 +298,7 @@ export function summarise(markdown: string, limit = 180): string {
     );
     if (!text) continue;
     parts.push(text);
-    // Plus the separator. Enough to fill the card is enough — the rest of a
+    // Plus the separator. Enough to fill the card is enough; the rest of a
     // long script is work nobody sees.
     length += text.length + 3;
     if (length >= limit) break;
@@ -312,7 +312,7 @@ export function summarise(markdown: string, limit = 180): string {
 
 /**
  * Enough of the source to fill `limit` readable characters even if most of it
- * turns out to be markup — a script may be hundreds of kilobytes, and a card
+ * turns out to be markup; a script may be hundreds of kilobytes, and a card
  * has no reason to split all of it. Cut on a line so the window never ends
  * mid-word.
  */

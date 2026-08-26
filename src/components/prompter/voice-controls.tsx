@@ -97,7 +97,7 @@ export function VoiceReadout({
     (voice.status === "starting"
       ? "Listening for you…"
       : voice.searching
-        ? "Lost the line — say a few words from where you are."
+        ? "Lost the line. Say a few words from where you are."
         : voice.transcript);
 
   const tone = voice.error
@@ -192,7 +192,7 @@ export function VoicePanel({
         <>
           <p className="text-[0.75rem] leading-relaxed text-stage-muted">
             Recognition is the browser&rsquo;s own. In Chrome and Edge that
-            means the audio goes to the browser vendor&rsquo;s speech service —
+            means the audio goes to the browser vendor&rsquo;s speech service;
             it never reaches Teleprompt, and nothing is recorded or stored, but
             it does leave this device.
           </p>

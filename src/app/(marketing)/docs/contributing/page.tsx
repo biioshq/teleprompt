@@ -54,7 +54,7 @@ scripts/
 
       <h2 id="setup">Getting set up</h2>
       <p>
-        Follow <Link href="/docs/self-hosting">Self-hosting</Link> — a
+        Follow <Link href="/docs/self-hosting">Self-hosting</Link>; a
         contributor setup and a self-hosted setup are the same thing. You need
         your own Supabase project and at least one OAuth client of your own;
         there is no shared development backend.
@@ -111,7 +111,7 @@ scripts/
           live; if it says Relay, you are exercising the fallback.
         </li>
         <li>
-          Test a reload mid-session — persistence is easy to break and easy to
+          Test a reload mid-session. Persistence is easy to break and easy to
           miss.
         </li>
       </ol>

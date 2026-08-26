@@ -9,9 +9,9 @@ import { PrompterEngine, type EngineMode } from "~/components/prompter/engine";
 /**
  * Binds a `PrompterEngine` to a `ScriptCanvas`.
  *
- * Everything that changes the shape of the text — the script itself, type size,
+ * Everything that changes the shape of the text (the script itself, type size,
  * line height, column width, the position of the reading line, a rotation, a
- * web font finally arriving — has to trigger a re-measure, and every re-measure
+ * web font finally arriving) has to trigger a re-measure, and every re-measure
  * keeps the reader on the same words.
  */
 export function useEngine({

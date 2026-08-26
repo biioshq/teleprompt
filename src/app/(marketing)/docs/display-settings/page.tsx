@@ -71,7 +71,7 @@ export default function Page() {
       <p>
         From 40% to 100% of the screen. On a wide display, pulling the column in
         to 60–70% keeps line lengths readable and keeps your eyes near the
-        centre — which, if there is a camera behind the glass, is where you want
+        centre, which (if there is a camera behind the glass) is where you want
         them.
       </p>
 
@@ -87,7 +87,7 @@ export default function Page() {
           centre, with a couple of lines of lookahead below.
         </li>
         <li>
-          <strong>Higher, around 25%</strong>, gives you much more lookahead —
+          <strong>Higher, around 25%</strong>, gives you much more lookahead:
           good for dense material you have not rehearsed.
         </li>
         <li>
@@ -103,16 +103,16 @@ export default function Page() {
       <h2 id="surfaces">Surfaces</h2>
       <ul>
         <li>
-          <strong>Night</strong> — near-black with warm off-white text. The
+          <strong>Night</strong>: near-black with warm off-white text. The
           default, and the right answer in most rooms.
         </li>
         <li>
-          <strong>Amber</strong> — amber text on black. The classic broadcast
+          <strong>Amber</strong>: amber text on black. The classic broadcast
           prompter look; the lower blue content is easier on the eyes over a
           long session and throws less colour onto your face in a dark studio.
         </li>
         <li>
-          <strong>Paper</strong> — ink on warm off-white. For bright rooms and
+          <strong>Paper</strong>: ink on warm off-white. For bright rooms and
           daylight, where a dark screen turns into a mirror.
         </li>
       </ul>

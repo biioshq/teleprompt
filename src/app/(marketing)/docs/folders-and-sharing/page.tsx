@@ -43,7 +43,7 @@ export default function Page() {
       <p>
         Folders belong to one account. Somebody you have given editing rights to
         can change the scripts in a shared folder, but cannot rename it, move
-        it, delete it, or put their own scripts in it — see{" "}
+        it, delete it, or put their own scripts in it; see{" "}
         <a href="#inheritance">below</a> for why that line is where it is.
       </p>
 
@@ -57,7 +57,7 @@ export default function Page() {
       </p>
 
       <Note tone="blue" title="No email is sent">
-        Teleprompt has no mail provider, deliberately — one more service and one
+        Teleprompt has no mail provider, deliberately: one more service and one
         more set of credentials to configure before a self-hosted copy works.
         Sharing puts the item in the other person&rsquo;s{" "}
         <strong>Shared with me</strong> list and nothing else happens. Tell them
@@ -147,7 +147,7 @@ export default function Page() {
       </p>
       <p>
         Access travels down and never sideways or up. Being given a folder does
-        not reveal the folder it sits in, or its name — the breadcrumb above a
+        not reveal the folder it sits in, or its name; the breadcrumb above a
         shared folder stops where your access does.
       </p>
       <p>
@@ -167,8 +167,8 @@ export default function Page() {
       <p>
         A shared script is not your copy. Editing one as an editor changes the
         original, for everybody. If you want a version of your own, press{" "}
-        <strong>Duplicate</strong> — the copy is yours outright and lands at
-        your top level.
+        <strong>Duplicate</strong>; the copy is yours outright and lands at your
+        top level.
       </p>
 
       <h2 id="presenting">Presenting somebody else&rsquo;s script</h2>
@@ -186,7 +186,7 @@ export default function Page() {
       <p>
         If the owner edits the script while your session is live, your display
         picks the change up within a few seconds, carrying your reading position
-        across — the same behaviour as editing your own script mid-session.
+        across: the same behaviour as editing your own script mid-session.
       </p>
 
       <h2 id="removing">Taking access away</h2>
@@ -199,7 +199,7 @@ export default function Page() {
       <p>
         On the other side, anything shared with you has a{" "}
         <strong>Remove from my library</strong> action. It gives the grant back
-        and takes the item off your dashboard. It does not delete anything — the
+        and takes the item off your dashboard. It does not delete anything; the
         owner keeps their work, and they can share it again.
       </p>
     </DocPage>

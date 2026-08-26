@@ -37,7 +37,7 @@ These are the deliberate decisions most likely to come up:
   random `channelKey`. It is returned by exactly one endpoint, and only to a
   signed-in device on the owning account. Anyone who learns a channel key can
   observe and inject messages on that channel, which is why it is never exposed
-  anywhere else — findings that leak it are high severity.
+  anywhere else; findings that leak it are high severity.
 - **The join code is not a credential.** It is a lookup key scoped to an
   account. Possessing a code without the account grants nothing.
 - **The browser holds only the Supabase publishable key** and never reads or

@@ -40,7 +40,7 @@ export const commandSchema = z.discriminatedUnion("k", [
   z.object({ k: z.literal("toggle") }),
   /** Jump the reading line to an exact place in the text. */
   z.object({ k: z.literal("seek"), anchor: anchorSchema }),
-  /** Step whole blocks — the remote's "previous / next line" buttons. */
+  /** Step whole blocks: the remote's "previous / next line" buttons. */
   z.object({ k: z.literal("step"), blocks: z.number().int().min(-50).max(50) }),
   /** Fine scrub in reading-line heights, for a drag on the remote. */
   z.object({ k: z.literal("scrub"), delta: z.number().min(-40).max(40) }),

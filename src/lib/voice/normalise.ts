@@ -89,7 +89,7 @@ const SPOKEN_SYMBOLS: Array<[RegExp, string]> = [
  *
  * Only this block is stripped. It covers the Latin, Greek and Cyrillic accents
  * a recogniser routinely drops or adds, and it leaves Devanagari matras, Thai
- * vowel signs and Arabic harakat alone — those are not decoration, and folding
+ * vowel signs and Arabic harakat alone; those are not decoration, and folding
  * them away would make a script in those languages unmatchable.
  */
 const LATIN_DIACRITICS = /[\u0300-\u036f]/g;
@@ -112,7 +112,7 @@ export function expandWord(input: string): string[] {
     text = text.replace(pattern, replacement);
   }
 
-  // Apostrophes close up rather than split, so "don't" and "dont" agree — a
+  // Apostrophes close up rather than split, so "don't" and "dont" agree; a
   // recogniser will happily return either.
   text = text.replace(/['‘’ʼ]/g, "");
   // Everything else that is not a letter, a digit or a space is a separator.

@@ -29,7 +29,7 @@ export function InstallPrompt({
           className,
         )}
       >
-        Installed — running as an app
+        Installed, running as an app
       </p>
     );
   }

@@ -11,7 +11,7 @@ import { cn } from "~/lib/utils";
  * Renders a script as a flat list of blocks.
  *
  * The list is memoised on the source text alone. Once it is mounted, scrolling
- * never re-renders it — the engine translates the wrapper and writes the active
+ * never re-renders it; the engine translates the wrapper and writes the active
  * block's attribute directly. Type size and width are applied as inline styles
  * on the wrapper so a settings change reflows the text without rebuilding it.
  */
@@ -21,7 +21,7 @@ export type ScriptCanvasProps = {
   state: PrompterState;
   viewportRef: React.RefObject<HTMLDivElement | null>;
   contentRef: React.RefObject<HTMLDivElement | null>;
-  /** Only affects the cursor — the container resolves which block was hit. */
+  /** Only affects the cursor; the container resolves which block was hit. */
   interactive?: boolean;
   /** Render one element per word, for voice tracking. */
   words?: boolean;

@@ -17,7 +17,7 @@ import { SITE } from "~/lib/site";
 import { auth } from "~/server/auth";
 
 export const metadata: Metadata = {
-  title: `${SITE.name} — ${SITE.tagline}`,
+  title: `${SITE.name}: ${SITE.tagline}`,
   description: SITE.description,
   alternates: { canonical: "/" },
 };

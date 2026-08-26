@@ -13,8 +13,8 @@
  *
  * Worth being straight about, and the UI says so too: in Chrome and Edge this
  * API streams audio to the browser vendor's speech service. It is the
- * browser's connection rather than ours — we never receive the audio and never
- * store a transcript — but it does leave the machine.
+ * browser's connection rather than ours (we never receive the audio and never
+ * store a transcript), but it does leave the machine.
  */
 
 type Alternative = { transcript: string };
@@ -309,7 +309,7 @@ export class SpeechListener {
     recognition.onend = () => {
       this.recognition = null;
       if (!this.armed) return;
-      // Every browser ends the session on its own schedule — after a pause, a
+      // Every browser ends the session on its own schedule: after a pause, a
       // final result, or a fixed timeout. Starting a fresh one is what turns
       // that into one continuous take.
       const delay =

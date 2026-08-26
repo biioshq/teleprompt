@@ -11,8 +11,8 @@ import {
 /**
  * The five-minute rule, pinned.
  *
- * The docs make a promise in plain English — a room closes after five quiet
- * minutes — and these are the assertions that keep it true. The stored status
+ * The docs make a promise in plain English (a room closes after five quiet
+ * minutes), and these are the assertions that keep it true. The stored status
  * alone cannot carry it, because the sweep that writes it only runs when the
  * owning account happens to open a room or load a dashboard. Run with
  * `npm test`.

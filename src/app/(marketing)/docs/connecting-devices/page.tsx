@@ -38,8 +38,8 @@ export default function Page() {
         Access to a room is not granted by a link. Every device that wants in
         has to be signed in to the account that opened it. The server checks
         ownership on every request, and the secret that names the realtime
-        channel — a 256-bit value — is only ever returned to a signed-in device
-        on that account.
+        channel (a 256-bit value) is only ever returned to a signed-in device on
+        that account.
       </p>
 
       <Note title="Not a shared link">
@@ -53,7 +53,7 @@ export default function Page() {
       <p>
         A code looks like <code>K7M-2QF</code>: six characters in two groups.
         The alphabet leaves out every character that gets misread when someone
-        reads it off one screen and types it into another — no <code>O</code> or{" "}
+        reads it off one screen and types it into another: no <code>O</code> or{" "}
         <code>0</code>, no <code>I</code> or <code>1</code>, no <code>S</code>{" "}
         or <code>5</code>, no <code>B</code> or <code>8</code>.
       </p>
@@ -67,14 +67,14 @@ export default function Page() {
       <p>Each device takes one of two roles when it joins.</p>
       <ul>
         <li>
-          <strong>Display</strong> — the screen your audience is behind. Full
+          <strong>Display</strong>: the screen your audience is behind. Full
           bleed, edge fades, a reading line, optional mirroring, and a screen
           wake lock. Chrome fades out a couple of seconds after the text starts
           moving.
         </li>
         <li>
-          <strong>Remote</strong> — the device in your hand. Shows the same
-          words at its own type size, plus the transport controls.
+          <strong>Remote</strong>: the device in your hand. Shows the same words
+          at its own type size, plus the transport controls.
         </li>
       </ul>
       <p>
@@ -90,7 +90,7 @@ export default function Page() {
       </p>
       <p>
         Exactly one device drives playback: the display that has been connected
-        the longest. Every other device — extra displays included — follows it.
+        the longest. Every other device, extra displays included, follows it.
         Both sides work that rule out independently from the presence list, so
         there is no negotiation round trip and no moment where two devices think
         they are in charge.
@@ -109,8 +109,8 @@ export default function Page() {
       </p>
       <p>
         If it opens, position updates move onto it and the badge reads{" "}
-        <strong>Direct</strong>. If it does not — symmetric NAT, a corporate
-        network that blocks UDP, no STUN reachability — the badge reads{" "}
+        <strong>Direct</strong>. If it does not (symmetric NAT, a corporate
+        network that blocks UDP, no STUN reachability), the badge reads{" "}
         <strong>Relay</strong> and the same messages keep flowing through the
         relay. There is no degraded mode; the only difference is a few tens of
         milliseconds.
@@ -135,7 +135,7 @@ export default function Page() {
           foreground.
         </li>
         <li>
-          The room page open and <em>visible</em> — which is why walking to the
+          The room page open and <em>visible</em>, which is why walking to the
           other device does not cost you the room. The page you left the code on
           counts while you can see it, and stops counting when you switch away.
         </li>
@@ -146,14 +146,14 @@ export default function Page() {
       </ul>
       <p>
         What does not count is a device that has gone to sleep. A phone that
-        locks or a laptop whose lid is shut stops checking in — browsers freeze
-        a hidden tab&rsquo;s timers, and a suspended one sends nothing at all —
-        so a room left on one closes like any other.
+        locks or a laptop whose lid is shut stops checking in (browsers freeze a
+        hidden tab&rsquo;s timers, and a suspended one sends nothing at all), so
+        a room left on one closes like any other.
       </p>
       <p>
         Playback position is written back to the database every few seconds, so
-        a device that reloads — or one that drops off the network and comes back
-        — picks up within a sentence of where it stopped.
+        a device that reloads (or one that drops off the network and comes back)
+        picks up within a sentence of where it stopped.
       </p>
       <p>
         Editing the script behind a live room is safe. The new text is written

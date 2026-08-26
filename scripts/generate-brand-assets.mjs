@@ -2,8 +2,8 @@
 /**
  * Renders the Teleprompt app icons.
  *
- * The mark is three lines of text on a dark tile: two dim, and one — the line
- * currently on the reading line — in Biios orange, running past the edge of the
+ * The mark is three lines of text on a dark tile: two dim, and one (the line
+ * currently on the reading line) in Biios orange, running past the edge of the
  * tile because that line is also being sent to the other device. That is the
  * whole product in one glyph.
  *
@@ -23,7 +23,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = join(HERE, "..", "public", "icons");
 
 /* -------------------------------------------------------------------------- */
-/* Palette — kept in sync with src/styles/globals.css                         */
+/* Palette: kept in sync with src/styles/globals.css                          */
 /* -------------------------------------------------------------------------- */
 
 const INK = [0x1a, 0x1a, 0x1b];
@@ -200,7 +200,7 @@ function renderIcon(size, { tileRadius = 0.22, contentScale = 0.78 } = {}) {
 /* -------------------------------------------------------------------------- */
 
 const TARGETS = [
-  // Standard app icons — the tile carries its own corner radius.
+  // Standard app icons: the tile carries its own corner radius.
   { file: "icon-96.png", size: 96, options: {} },
   { file: "icon-192.png", size: 192, options: {} },
   { file: "icon-256.png", size: 256, options: {} },
@@ -227,7 +227,7 @@ const TARGETS = [
     options: { tileRadius: 0, contentScale: 0.74 },
   },
 
-  // Favicons — heavier strokes so the mark survives at 16px.
+  // Favicons: heavier strokes so the mark survives at 16px.
   {
     file: "favicon-32.png",
     size: 32,

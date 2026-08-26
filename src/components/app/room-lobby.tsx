@@ -46,7 +46,7 @@ export function RoomLobby({ roomId }: { roomId: string }) {
   });
 
   /**
-   * This page is the one screen where a person deliberately waits — for the
+   * This page is the one screen where a person deliberately waits: for the
    * second device, or for someone to walk in with it. A five-minute window
    * would close the room while they were looking straight at it, so looking
    * counts as activity.
@@ -163,7 +163,7 @@ export function RoomLobby({ roomId }: { roomId: string }) {
       </div>
 
       {/*
-        A closed room keeps its page — the words, the devices that were on it —
+        A closed room keeps its page (the words, the devices that were on it)
         but not the parts that invite someone in. Offering a join code that no
         longer resolves is worse than offering nothing.
       */}
@@ -259,7 +259,7 @@ export function RoomLobby({ roomId }: { roomId: string }) {
           <p className="text-[0.875rem] text-faint">
             {live
               ? "Nothing has joined yet. Open a role above to get started."
-              : "None — closing a room releases its device records."}
+              : "None: closing a room releases its device records."}
           </p>
         ) : (
           <ul className="divide-y divide-line rounded-sm border border-line bg-surface">
@@ -311,7 +311,7 @@ export function RoomLobby({ roomId }: { roomId: string }) {
           <p className="mr-auto text-[0.8125rem] text-faint">
             Opened {relativeTime(new Date(data.createdAt))}.{" "}
             {live
-              ? "Rooms close themselves after 5 quiet minutes — this page counts, so it stays open while you are here."
+              ? "Rooms close themselves after 5 quiet minutes; this page counts, so it stays open while you are here."
               : data.closedReason === "closed"
                 ? "It was ended deliberately."
                 : "It closed after 5 quiet minutes."}

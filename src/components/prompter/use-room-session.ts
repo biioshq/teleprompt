@@ -84,7 +84,7 @@ export function useRoomSession({
   words?: boolean;
   /**
    * The remote shows the same words as the display but at its own type size,
-   * column width and orientation — a phone is not a monitor. Because devices
+   * column width and orientation; a phone is not a monitor. Because devices
    * sync a text anchor rather than a pixel offset, the two can be laid out
    * completely differently and still sit on the same line.
    */
@@ -100,7 +100,7 @@ export function useRoomSession({
       // Position, pace and type size are all worth restoring from the saved
       // room. A microphone is not. The row is written every few seconds while
       // a session runs, so a room left with voice tracking on would switch it
-      // back on by itself the next time it was opened — which is not a thing a
+      // back on by itself the next time it was opened, which is not a thing a
       // microphone should ever do without being asked.
       voiceTracking: false,
     }),
@@ -210,7 +210,7 @@ export function useRoomSession({
           return;
         case "toggle": {
           // With voice tracking on, the first press means "stop following me"
-          // rather than "start the clock" — otherwise the only way to stop
+          // rather than "start the clock"; otherwise the only way to stop
           // would be to reach for a different control than the one that is
           // obviously the stop button.
           if (stateRef.current.voiceTracking) {

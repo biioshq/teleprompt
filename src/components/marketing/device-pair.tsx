@@ -17,8 +17,8 @@ import { cn } from "~/lib/utils";
  *
  * It is a small working prompter rather than a looping picture of one. The
  * transport under the remote does what it says, a line can be tapped to jump
- * to it, the bar scrubs — because the shortest explanation of a remote control
- * is letting someone hold it.
+ * to it, the bar scrubs. The shortest explanation of a remote control is
+ * letting someone hold it.
  *
  * One position drives both panels. They render it at 17px and at 11px and stay
  * on the same line throughout, because position is carried as a line number
@@ -118,7 +118,7 @@ type Glide = { from: number; to: number; start: number; span: number };
  * Position lives in a ref and is painted straight onto the DOM from a rAF
  * loop, exactly as the real prompter does it: sixty frames a second of scroll
  * should not be sixty React renders. Only the things a person can see the
- * state of — the play icon, the pace — are state.
+ * state of (the play icon, the pace) are state.
  */
 function usePrompterDemo() {
   const root = useRef<HTMLDivElement | null>(null);
@@ -156,7 +156,7 @@ function usePrompterDemo() {
     ).matches;
 
     /* Nothing in the hero should move on its own for someone who has asked
-       for that. The controls still work — this only decides whether it starts
+       for that. The controls still work; this only decides whether it starts
        playing and whether a jump is eased or cut. */
     if (reduced.current) {
       playing.current = false;
@@ -201,7 +201,7 @@ function usePrompterDemo() {
       slider.current?.setAttribute("aria-valuenow", String(index + 1));
       slider.current?.setAttribute(
         "aria-valuetext",
-        line ? (line.cue ? `Cue — ${line.text}` : line.text) : "",
+        line ? (line.cue ? `Cue: ${line.text}` : line.text) : "",
       );
     };
 
@@ -237,7 +237,7 @@ function usePrompterDemo() {
     };
 
     /* Everything that changes position calls this. When the loop is already
-       running it does nothing; when it is not, it buys exactly one frame — so
+       running it does nothing; when it is not, it buys exactly one frame, so
        a scrub repaints without the demo having to idle at 60fps to be ready. */
     const start = () => {
       if (frame !== null) return;
@@ -619,7 +619,7 @@ export function DevicePair({ className }: { className?: string }) {
     <div
       ref={root}
       role="group"
-      aria-label="Demo — a display, and the remote that drives it"
+      aria-label="Demo: a display, and the remote that drives it"
       className={cn("relative", className)}
     >
       <p className="sr-only">
@@ -763,7 +763,7 @@ export function DevicePair({ className }: { className?: string }) {
                   <CaretDown size={10} weight="bold" />
                 </RemoteButton>
                 <RemoteButton
-                  label={`Reading pace — ${pace.label}, ${Math.round(BASE_WPM * pace.multiplier)} words a minute`}
+                  label={`Reading pace: ${pace.label}, ${Math.round(BASE_WPM * pace.multiplier)} words a minute`}
                   onClick={cyclePace}
                 >
                   <span className="font-mono text-[0.5rem]">{pace.label}</span>

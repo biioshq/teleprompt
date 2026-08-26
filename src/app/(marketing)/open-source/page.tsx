@@ -101,7 +101,7 @@ THE SOFTWARE.`}</code>
         <p>
           Once it existed, keeping it private would have meant maintaining a
           tool nobody could improve. So it is given to the community as it is
-          used internally — same code, no held-back tier.
+          used internally: same code, no held-back tier.
         </p>
         <p className="font-mono text-[0.8125rem]">
           Built with {"<3"} by {BIIOS.name} for the Community.
@@ -154,7 +154,7 @@ THE SOFTWARE.`}</code>
           Issues and pull requests are welcome. The{" "}
           <Link href="/docs/contributing">contributing guide</Link> covers the
           repository layout, the conventions, and how to test a sync change
-          properly — which needs two real devices, because the interesting parts
+          properly, which needs two real devices, because the interesting parts
           cannot be exercised in one browser window.
         </p>
       </div>

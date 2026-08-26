@@ -41,7 +41,7 @@ export function StageMessage({
  *
  * `closed` is somebody pressing End room; `expired` is the window running out.
  * `unknown` is a device arriving at a room that was already over, where the
- * stored status cannot tell the two apart — better to say nothing about the
+ * stored status cannot tell the two apart: better to say nothing about the
  * cause than to guess wrong at it.
  */
 export type ClosedReason = "closed" | "expired" | "unknown";
