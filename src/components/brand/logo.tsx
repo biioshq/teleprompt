@@ -100,7 +100,15 @@ export function Logo({
       <Mark className={cn("h-7 w-7", markClassName)} />
       <span
         className={cn(
-          "inline-flex flex-col items-start",
+          /* The stack holds the lockup's line-height, not the two lines
+             themselves. `cn` merges a caller's `wordmarkClassName` over the
+             wordmark's own classes, and tailwind-merge counts a font size as
+             replacing a leading — Tailwind sizes carry one — so a caller who
+             only meant to ask for a bigger wordmark takes its `leading-none`
+             away with them. That is how the two headers ended up drawing two
+             different lockups from the same component. Set here it is
+             inherited, and nothing a caller passes can reach it. */
+          "inline-flex flex-col items-start leading-none",
           /* Both lines are `leading-none`, so their boxes end well short of
              the ink: the stack's letters sit low inside it and read as
              misaligned against the mark. The padding lifts the ink back onto
@@ -108,14 +116,20 @@ export function Logo({
           byline && "pb-[3px]",
         )}
       >
-        <Wordmark className={wordmarkClassName} />
-        {/* Pulled up past the wordmark's baseline so the two lines overlap
-            slightly and read as one lockup. Nothing collides: the wordmark's
-            only descender is the `p` at the far right, and `by biios` is set
-            at the left. */}
-        {byline ? (
-          <Byline className={cn("-mt-[3px]", bylineClassName)} />
-        ) : null}
+        {/* The gap that keeps the wordmark's descenders off `by biios`. It has
+            to be here rather than on the byline, and in `em` rather than in
+            pixels, because the thing it is clearing — how far the `p` of
+            `teleprompt` drops below its own line box — scales with the
+            wordmark, which the caller sizes, and not with the byline, which is
+            a fixed size.
+
+            It is set wide enough for the deepest descender in the display
+            stack rather than for Familjen Grotesk's, which is one of the
+            shallowest. A device with no Arial to lend the fallback face its
+            metrics falls all the way through to Jakarta, whose `p` hangs
+            nearly a pixel lower, and that is the case this has to survive. */}
+        <Wordmark className={cn(byline && "mb-[0.12em]", wordmarkClassName)} />
+        {byline ? <Byline className={bylineClassName} /> : null}
       </span>
     </span>
   );
