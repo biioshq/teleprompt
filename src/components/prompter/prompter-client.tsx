@@ -417,7 +417,7 @@ function PrompterStage({
       {/* Bottom bar ------------------------------------------------------- */}
       <footer
         className={cn(
-          "absolute inset-x-0 bottom-0 z-20 px-5 pt-10 pb-[calc(1rem+env(safe-area-inset-bottom))] transition-opacity duration-300",
+          "absolute inset-x-0 bottom-0 z-20 pt-10 gutter pb-[calc(1rem+env(safe-area-inset-bottom))] transition-opacity duration-300",
           "bg-gradient-to-t from-black/55 to-transparent",
           showChrome ? "opacity-100" : "pointer-events-none opacity-0",
         )}

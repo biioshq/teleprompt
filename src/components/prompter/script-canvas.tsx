@@ -246,7 +246,7 @@ export function ScriptCanvas({
           ref={contentRef}
           // Centred with auto margins, never with a translate: the engine owns
           // this element's `transform` outright and would overwrite one.
-          className="absolute inset-x-0 top-0 mx-auto will-change-transform"
+          className="absolute inset-x-0 top-0 mx-auto pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] will-change-transform"
           style={{
             maxWidth: `${state.contentWidth}%`,
             fontSize: `${state.fontSize}px`,
@@ -271,7 +271,7 @@ export function ScriptCanvas({
       {chrome && state.showReadingLine ? (
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 z-10 flex items-center gap-3 px-4"
+          className="pointer-events-none absolute inset-x-0 z-10 flex items-center gap-3 gutter-sm"
           style={{ top: `${state.readingLine * 100}%` }}
         >
           <span

@@ -49,7 +49,7 @@ export function ScriptsBoard() {
   const isEmpty = scripts.isSuccess && scripts.data.length === 0;
 
   return (
-    <main className="mx-auto max-w-6xl px-5 py-10">
+    <main className="mx-auto max-w-6xl py-10 gutter">
       {/* Live rooms ------------------------------------------------------- */}
       {liveRooms.data && liveRooms.data.length > 0 ? (
         <section className="mb-10">

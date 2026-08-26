@@ -12,7 +12,7 @@ export default function DocsLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mx-auto max-w-6xl px-5 py-10 lg:py-16">
+    <div className="mx-auto max-w-6xl py-10 gutter lg:py-16">
       <div className="lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-14">
         {/* Mobile disclosure ------------------------------------------------ */}
         <details className="mb-8 rounded-sm border border-line bg-surface lg:hidden [&_summary::-webkit-details-marker]:hidden">

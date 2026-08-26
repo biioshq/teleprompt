@@ -47,7 +47,7 @@ export function RoomLobby({ roomId }: { roomId: string }) {
 
   if (room.isLoading) {
     return (
-      <main className="mx-auto max-w-4xl px-5 py-16">
+      <main className="mx-auto max-w-4xl py-16 gutter">
         <div className="h-72 animate-pulse rounded-sm border border-line bg-surface" />
       </main>
     );
@@ -55,7 +55,7 @@ export function RoomLobby({ roomId }: { roomId: string }) {
 
   if (room.error || !room.data) {
     return (
-      <main className="mx-auto max-w-md px-5 py-24 text-center">
+      <main className="mx-auto max-w-md py-24 gutter text-center">
         <h1 className="text-2xl">Room not available</h1>
         <p className="mt-3 text-[0.9375rem] text-muted">
           {room.error?.message ?? "It may have ended."}
@@ -82,7 +82,7 @@ export function RoomLobby({ roomId }: { roomId: string }) {
   };
 
   return (
-    <main className="mx-auto max-w-4xl px-5 py-8">
+    <main className="mx-auto max-w-4xl py-8 gutter">
       <Link
         href={data.scriptId ? `/app/scripts/${data.scriptId}` : "/app"}
         className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-ink"

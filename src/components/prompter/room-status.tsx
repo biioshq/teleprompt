@@ -17,7 +17,7 @@ export function StageMessage({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-stage px-6">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-stage gutter">
       <div className="w-full max-w-sm text-center">
         <Mark className="mx-auto h-10 w-10" />
         <h1 className="mt-7 text-2xl text-stage-ink">{title}</h1>
@@ -47,7 +47,7 @@ export function StageLoading({
   onRetry?: () => void;
 }) {
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-stage px-6">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-stage gutter">
       <div className="flex flex-col items-center gap-4 text-center">
         <div className="flex items-center gap-3">
           <span className="animate-live inline-block h-2 w-2 rounded-full bg-brand" />

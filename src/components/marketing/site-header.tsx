@@ -10,11 +10,11 @@ export async function SiteHeader() {
   const session = await auth();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-paper/80 pad-safe-top pad-safe-x backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-line bg-paper/80 pad-safe-top backdrop-blur-md">
       {/* Three tracks with matching `1fr` edges, so the nav is centred on the
           header itself rather than on whatever the logo and the buttons leave
           over. */}
-      <div className="mx-auto grid h-16 max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-8 px-5">
+      <div className="mx-auto grid h-16 max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-8 gutter">
         <Link href="/" aria-label={SITE.name} className="justify-self-start">
           <Logo
             byline

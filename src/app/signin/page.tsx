@@ -59,7 +59,7 @@ export default async function SignInPage({
   const missing = AUTH_PROVIDERS.filter((provider) => !provider.configured);
 
   return (
-    <main className="grid min-h-[100dvh] pad-safe-x lg:grid-cols-[1.05fr_1fr]">
+    <main className="grid min-h-[100dvh] lg:grid-cols-[1.05fr_1fr]">
       {/* Brand panel -------------------------------------------------------- */}
       <section className="relative hidden flex-col justify-between overflow-hidden bg-ink p-12 text-paper lg:flex">
         <Link href="/" className="relative z-10 inline-flex">
@@ -128,7 +128,7 @@ export default async function SignInPage({
       </section>
 
       {/* Form panel --------------------------------------------------------- */}
-      <section className="flex items-center justify-center px-6 py-16">
+      <section className="flex items-center justify-center py-16 gutter">
         <div className="w-full max-w-sm">
           <Link href="/" className="inline-flex lg:hidden">
             <Mark className="h-9 w-9" />

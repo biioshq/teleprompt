@@ -33,7 +33,7 @@ const LEGAL = [
 export function SiteFooter() {
   return (
     <footer className="border-t border-line bg-paper-deep">
-      <div className="mx-auto max-w-6xl px-5 py-14">
+      <div className="mx-auto max-w-6xl py-14 gutter">
         <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
           <div>
             <Logo />
