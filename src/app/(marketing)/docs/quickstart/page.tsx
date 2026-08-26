@@ -146,8 +146,8 @@ export default function Page() {
           home screen so it opens full screen.
         </li>
         <li>
-          <Link href="/docs/architecture">Architecture</Link>: what actually
-          travels between the two devices.
+          <Link href="/docs/display-settings">Display settings</Link>: type
+          size, mirroring and the reading line.
         </li>
       </ul>
     </DocPage>

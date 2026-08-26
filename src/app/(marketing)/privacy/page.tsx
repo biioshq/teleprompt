@@ -26,8 +26,8 @@ export default function PrivacyPage() {
           This notice covers the hosted version of {SITE.name}, operated by{" "}
           {BIIOS.name} ({BIIOS.city}). If you run your own instance, none of
           your data reaches us and this notice does not apply to it;{" "}
-          <Link href="/docs/self-hosting">Self-hosting</Link> explains what that
-          involves.
+          <Link href="/docs/self-hosting">Running your own</Link> explains what
+          that involves.
         </p>
         <p>
           The engineering detail behind all of this is in{" "}

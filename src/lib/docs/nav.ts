@@ -1,3 +1,5 @@
+export type DocAudience = "user" | "developer";
+
 export type DocLink = {
   slug: string;
   title: string;
@@ -6,6 +8,7 @@ export type DocLink = {
 
 export type DocSection = {
   title: string;
+  audience: DocAudience;
   pages: DocLink[];
 };
 
@@ -13,10 +16,17 @@ export type DocSection = {
  * The single source of truth for the documentation: the sidebar, the index
  * page, the previous/next links and the sitemap all read this list, so a new
  * page appears everywhere the moment it is added here.
+ *
+ * `audience` is the split between the pages someone reads to *use* Teleprompt
+ * and the pages someone reads to *run or change* it. The two are kept apart on
+ * purpose: a presenter looking up a keyboard shortcut should never have to
+ * scroll past a Postgres connection string to find it. The user sections come
+ * first, and every developer section follows them.
  */
 export const DOC_SECTIONS: DocSection[] = [
   {
     title: "Getting started",
+    audience: "user",
     pages: [
       {
         slug: "quickstart",
@@ -40,6 +50,7 @@ export const DOC_SECTIONS: DocSection[] = [
   },
   {
     title: "Using Teleprompt",
+    audience: "user",
     pages: [
       {
         slug: "writing-scripts",
@@ -57,7 +68,7 @@ export const DOC_SECTIONS: DocSection[] = [
         slug: "remote-control",
         title: "The remote",
         summary:
-          "Play, pace, stepping, tap-to-jump and scrubbing — everything the phone can do.",
+          "Play, pace, stepping, tap-to-jump and scrubbing: everything the phone can do.",
       },
       {
         slug: "display-settings",
@@ -71,21 +82,22 @@ export const DOC_SECTIONS: DocSection[] = [
         summary:
           "The display listens, marks the words you have said, and scrolls to keep up.",
       },
+    ],
+  },
+  {
+    title: "Reference",
+    audience: "user",
+    pages: [
       {
         slug: "shortcuts",
         title: "Keyboard shortcuts",
         summary: "Every key the display responds to.",
       },
-    ],
-  },
-  {
-    title: "Under the hood",
-    pages: [
       {
-        slug: "architecture",
-        title: "Architecture",
+        slug: "troubleshooting",
+        title: "Troubleshooting",
         summary:
-          "How two devices stay on the same line: anchors, transports and the wire protocol.",
+          "Relay instead of direct, a code that will not resolve, a display that will not wake.",
       },
       {
         slug: "privacy-and-data",
@@ -96,19 +108,32 @@ export const DOC_SECTIONS: DocSection[] = [
     ],
   },
   {
-    title: "Running it yourself",
+    title: "Self-hosting",
+    audience: "developer",
     pages: [
       {
         slug: "self-hosting",
-        title: "Self-hosting",
+        title: "Running your own",
         summary:
-          "Supabase, Google OAuth and environment variables, end to end.",
+          "Supabase, sign-in providers and environment variables, end to end.",
       },
       {
-        slug: "troubleshooting",
-        title: "Troubleshooting",
+        slug: "deployment-troubleshooting",
+        title: "Deployment troubleshooting",
         summary:
-          "Relay instead of direct, a code that will not resolve, a display that will not wake.",
+          "The health check, the IPv6 database endpoint, db:push crashes and sign-in that only fails in production.",
+      },
+    ],
+  },
+  {
+    title: "Working on Teleprompt",
+    audience: "developer",
+    pages: [
+      {
+        slug: "architecture",
+        title: "Architecture",
+        summary:
+          "How two devices stay on the same line: anchors, transports and the wire protocol.",
       },
       {
         slug: "contributing",
@@ -123,11 +148,38 @@ export const DOC_PAGES: DocLink[] = DOC_SECTIONS.flatMap(
   (section) => section.pages,
 );
 
+/** The sections written for people using Teleprompt, in sidebar order. */
+export const USER_SECTIONS = DOC_SECTIONS.filter(
+  (section) => section.audience === "user",
+);
+
+/** The sections written for people hosting or changing Teleprompt. */
+export const DEVELOPER_SECTIONS = DOC_SECTIONS.filter(
+  (section) => section.audience === "developer",
+);
+
+const AUDIENCE_BY_SLUG = new Map<string, DocAudience>(
+  DOC_SECTIONS.flatMap((section) =>
+    section.pages.map((page) => [page.slug, section.audience] as const),
+  ),
+);
+
+/**
+ * Previous/next stay inside one audience. Reading the user docs end to end
+ * should not tip you into a Supabase setup guide, and the developer run ends
+ * at the last developer page rather than looping back into presenter material.
+ */
 export function docNeighbours(slug: string) {
   const index = DOC_PAGES.findIndex((page) => page.slug === slug);
+  if (index < 0) return { previous: undefined, next: undefined };
+
+  const audience = AUDIENCE_BY_SLUG.get(slug);
+  const sameAudience = (page: DocLink | undefined) =>
+    page && AUDIENCE_BY_SLUG.get(page.slug) === audience ? page : undefined;
+
   return {
-    previous: index > 0 ? DOC_PAGES[index - 1] : undefined,
-    next: index >= 0 ? DOC_PAGES[index + 1] : undefined,
+    previous: sameAudience(DOC_PAGES[index - 1]),
+    next: sameAudience(DOC_PAGES[index + 1]),
   };
 }
 

@@ -231,11 +231,28 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY="…"
         want to look at them.
       </p>
       <p>
-        The push runs over whichever URL is in <code>DATABASE_URL</code>,
-        including the transaction pooler. Session mode is not required for the
-        migration, and not every project exposes it on the <code>aws-0</code>{" "}
-        hostname, so reach for it only if the transaction pooler gives you
-        trouble.
+        The app connects over the transaction pooler on port <code>6543</code>,
+        but the Drizzle CLI needs one connection for a whole run, so{" "}
+        <code>drizzle.config.ts</code> swaps <code>:6543</code> for{" "}
+        <code>:5432</code> on <code>.pooler.supabase.com</code> hosts by itself.
+        There is nothing to configure for a standard Supabase setup, and a
+        direct <code>db.&lt;ref&gt;.supabase.co</code> host or a local Postgres
+        is already on <code>5432</code> and is left alone. If your setup does
+        not match that substitution, set <code>DIRECT_DATABASE_URL</code> to a
+        session-mode connection and it is used instead.
+      </p>
+      <p>
+        If the push stops with{" "}
+        <code>
+          TypeError: Cannot read properties of undefined (reading
+          &lsquo;replace&rsquo;)
+        </code>{" "}
+        somewhere inside <code>drizzle-kit</code>, the connection is the problem
+        rather than your schema;{" "}
+        <Link href="/docs/deployment-troubleshooting#db-push">
+          Deployment troubleshooting
+        </Link>{" "}
+        explains why and what to do about it.
       </p>
 
       <h2 id="run">6. Run it</h2>
@@ -292,9 +309,9 @@ npm run preview    # build, then serve it`}</code>
         </li>
       </ul>
       <p>
-        For the things that only go wrong once it is deployed &mdash; sign-in
-        that works on your machine and not on the host, a database the
-        deployment cannot reach &mdash; see{" "}
+        For the things that only go wrong once it is deployed, such as sign-in
+        that works on your machine and not on the host, or a database the
+        deployment cannot reach, see{" "}
         <Link href="/docs/deployment-troubleshooting">
           Deployment troubleshooting
         </Link>

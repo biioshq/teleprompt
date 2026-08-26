@@ -162,8 +162,9 @@ export default function Page() {
         room and open another one.
       </p>
       <p>
-        See <Link href="/docs/architecture">Architecture</Link> for the message
-        formats and the exact state model.
+        The message formats and the exact state model are written up in{" "}
+        <Link href="/docs/architecture">Architecture</Link>, over in the
+        developer documentation.
       </p>
     </DocPage>
   );
