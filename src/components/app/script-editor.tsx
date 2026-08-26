@@ -8,13 +8,17 @@ import {
   ArrowRight,
   CheckCircle,
   CloudSlash,
+  Copy,
+  Eye,
   Play,
+  ShareNetwork,
 } from "@phosphor-icons/react/dist/ssr";
 
 import { MarkdownEditor } from "~/components/app/markdown-editor";
+import { ShareDialog } from "~/components/app/share-dialog";
 import { Cue } from "~/components/brand/cue";
 import { Button, ButtonLink } from "~/components/ui/button";
-import { LiveDot } from "~/components/ui/badge";
+import { Badge, LiveDot } from "~/components/ui/badge";
 import { splitIntoBlocks, spokenWordCount } from "~/lib/markdown/blocks";
 import { formatDuration, readingTimeSeconds } from "~/lib/prompter/state";
 import { pluralise } from "~/lib/utils";
@@ -32,6 +36,19 @@ export function ScriptEditor({ scriptId }: { scriptId: string }) {
   const [hydrated, setHydrated] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [height, setHeight] = useState(480);
+  const [sharing, setSharing] = useState(false);
+
+  /**
+   * What this account may do with this script, decided by the server.
+   *
+   * Read before the first keystroke rather than discovered from a rejected
+   * save: letting somebody write three paragraphs into a script they cannot
+   * change, and only then telling them, is the worst possible order to find
+   * out.
+   */
+  const access = script.data?.access ?? "viewer";
+  const readOnly = access === "viewer";
+  const isOwner = access === "owner";
 
   const update = api.script.update.useMutation({
     onSuccess: () => {
@@ -44,6 +61,14 @@ export function ScriptEditor({ scriptId }: { scriptId: string }) {
   // silently strands the code the other device is already holding, so the
   // existing room is offered first and a new one has to be asked for.
   const activeRoom = api.room.activeForScript.useQuery({ scriptId });
+
+  const duplicate = api.script.duplicate.useMutation({
+    onSuccess: (copy) => {
+      void utils.script.list.invalidate();
+      void utils.library.browse.invalidate();
+      router.push(`/app/scripts/${copy.id}`);
+    },
+  });
 
   const createRoom = api.room.create.useMutation({
     onSuccess: (room) => {
@@ -73,21 +98,21 @@ export function ScriptEditor({ scriptId }: { scriptId: string }) {
   const saveRef = useRef(update.mutate);
   saveRef.current = update.mutate;
   useEffect(() => {
-    if (!hydrated || !dirty) return;
+    if (!hydrated || !dirty || readOnly) return;
     const timer = window.setTimeout(() => {
       saveRef.current({ id: scriptId, title, body });
     }, AUTOSAVE_DELAY_MS);
     return () => window.clearTimeout(timer);
-  }, [body, dirty, hydrated, scriptId, title]);
+  }, [body, dirty, hydrated, readOnly, scriptId, title]);
 
   // A last-ditch flush if the tab is closed mid-edit.
   useEffect(() => {
     const onHide = () => {
-      if (dirty) saveRef.current({ id: scriptId, title, body });
+      if (dirty && !readOnly) saveRef.current({ id: scriptId, title, body });
     };
     window.addEventListener("pagehide", onHide);
     return () => window.removeEventListener("pagehide", onHide);
-  }, [body, dirty, scriptId, title]);
+  }, [body, dirty, readOnly, scriptId, title]);
 
   const stats = useMemo(() => {
     const blocks = splitIntoBlocks(body);
@@ -101,7 +126,7 @@ export function ScriptEditor({ scriptId }: { scriptId: string }) {
 
   if (script.isLoading) {
     return (
-      <main className="mx-auto max-w-6xl px-5 py-16">
+      <main className="mx-auto max-w-6xl py-16 gutter">
         <div className="h-[520px] animate-pulse rounded-sm border border-line bg-surface" />
       </main>
     );
@@ -109,7 +134,7 @@ export function ScriptEditor({ scriptId }: { scriptId: string }) {
 
   if (script.error || !script.data) {
     return (
-      <main className="mx-auto max-w-md px-5 py-24 text-center">
+      <main className="mx-auto max-w-md py-24 gutter text-center">
         <h1 className="text-2xl">Script not found</h1>
         <p className="mt-3 text-[0.9375rem] text-muted">
           {script.error?.message ?? "It may have been deleted."}
@@ -122,42 +147,76 @@ export function ScriptEditor({ scriptId }: { scriptId: string }) {
   }
 
   return (
-    <main className="mx-auto max-w-6xl px-5 py-8">
-      <Link
-        href="/app"
-        className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-ink"
-      >
-        <ArrowLeft size={14} weight="bold" />
-        All scripts
-      </Link>
+    <main className="mx-auto max-w-6xl py-8 gutter">
+      <div className="mb-6 flex flex-wrap items-center gap-3">
+        <Link
+          href={
+            script.data.folderId && isOwner
+              ? `/app/folders/${script.data.folderId}`
+              : "/app"
+          }
+          className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-ink"
+        >
+          <ArrowLeft size={14} weight="bold" />
+          {script.data.folderId && isOwner ? "Back to folder" : "All scripts"}
+        </Link>
+
+        {isOwner ? null : (
+          <span className="flex items-center gap-2">
+            <Badge tone={access === "editor" ? "jade" : "neutral"}>
+              {access === "editor" ? "Editor" : "View only"}
+            </Badge>
+            <span className="text-[0.75rem] text-faint">
+              Shared with you — this is not your copy.
+            </span>
+          </span>
+        )}
+      </div>
 
       <div className="grid gap-8 lg:grid-cols-[1fr_17rem]">
         {/* Editor --------------------------------------------------------- */}
         <div className="min-w-0">
           <input
             value={title}
+            readOnly={readOnly}
             onChange={(event) => {
               setTitle(event.target.value);
               setDirty(true);
             }}
             aria-label="Script title"
             placeholder="Untitled script"
-            className="mb-5 w-full border-0 bg-transparent p-0 font-display text-3xl tracking-[-0.025em] text-ink outline-none placeholder:text-faint"
+            className="mb-5 w-full border-0 bg-transparent p-0 font-display text-3xl tracking-[-0.025em] text-ink outline-none placeholder:text-faint read-only:cursor-default"
           />
 
-          <div className="overflow-hidden rounded-sm border border-line">
-            <MarkdownEditor
-              value={body}
-              onChange={(next) => {
-                setBody(next);
-                setDirty(true);
-              }}
-              height={height}
-            />
-          </div>
+          {readOnly ? (
+            <div
+              className="overflow-y-auto rounded-sm border border-line bg-surface px-6 py-5"
+              style={{ height }}
+            >
+              <pre className="font-mono text-[0.875rem] leading-[1.9] whitespace-pre-wrap text-ink-soft">
+                {body || "This script is empty."}
+              </pre>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-sm border border-line">
+              <MarkdownEditor
+                value={body}
+                onChange={(next) => {
+                  setBody(next);
+                  setDirty(true);
+                }}
+                height={height}
+              />
+            </div>
+          )}
 
           <div className="mt-3 flex items-center gap-2 text-[0.75rem] text-faint">
-            {update.isPending ? (
+            {readOnly ? (
+              <>
+                <Eye size={13} weight="bold" className="text-muted" />
+                Read-only. Duplicate it to make a version you can change.
+              </>
+            ) : update.isPending ? (
               <>
                 <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-brand" />
                 Saving
@@ -229,9 +288,35 @@ export function ScriptEditor({ scriptId }: { scriptId: string }) {
           )}
           {stats.words === 0 ? (
             <p className="-mt-3 text-[0.75rem] leading-relaxed text-faint">
-              Write something first — an empty script has nothing to scroll.
+              {readOnly
+                ? "This script is empty, so there is nothing to present yet."
+                : "Write something first — an empty script has nothing to scroll."}
             </p>
           ) : null}
+
+          <div className="flex flex-wrap gap-2">
+            {isOwner ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={() => setSharing(true)}
+              >
+                <ShareNetwork size={15} weight="bold" />
+                Share
+              </Button>
+            ) : null}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex-1"
+              onClick={() => duplicate.mutate({ id: scriptId })}
+              disabled={duplicate.isPending}
+            >
+              <Copy size={15} weight="bold" />
+              {duplicate.isPending ? "Copying…" : "Duplicate"}
+            </Button>
+          </div>
 
           <dl className="rounded-sm border border-line bg-surface">
             {[
@@ -299,6 +384,13 @@ export function ScriptEditor({ scriptId }: { scriptId: string }) {
           </div>
         </aside>
       </div>
+
+      {sharing ? (
+        <ShareDialog
+          target={{ kind: "script", id: scriptId, name: title }}
+          onClose={() => setSharing(false)}
+        />
+      ) : null}
     </main>
   );
 }

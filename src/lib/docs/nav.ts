@@ -48,6 +48,12 @@ export const DOC_SECTIONS: DocSection[] = [
           "The Markdown you can use, how a script is broken into blocks, and cues.",
       },
       {
+        slug: "folders-and-sharing",
+        title: "Folders and sharing",
+        summary:
+          "Organise scripts into folders, and give other people view-only or editing access by email.",
+      },
+      {
         slug: "remote-control",
         title: "The remote",
         summary:

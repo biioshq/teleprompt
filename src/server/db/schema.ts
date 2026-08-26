@@ -1,6 +1,17 @@
 import { relations, sql } from "drizzle-orm";
-import { index, pgTableCreator, primaryKey, unique } from "drizzle-orm/pg-core";
-import { type AdapterAccount } from "next-auth/adapters";
+import {
+  check,
+  index,
+  pgTableCreator,
+  primaryKey,
+  unique,
+  type AnyPgColumn,
+} from "drizzle-orm/pg-core";
+// `import type`, not the inline-type form: under `verbatimModuleSyntax` the
+// inline form leaves a real import of a subpath `next-auth` does not export at
+// runtime. The bundler resolves it anyway, so nothing was broken — but nothing
+// outside the bundler could load this file either.
+import type { AdapterAccount } from "next-auth/adapters";
 
 import {
   DEFAULT_PROMPTER_STATE,
@@ -91,6 +102,55 @@ export const verificationTokens = createTable(
 );
 
 /* -------------------------------------------------------------------------- */
+/* Folders                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A folder belongs to exactly one account and may sit inside another folder.
+ *
+ * The tree is walked in SQL rather than in application code — see
+ * `server/library/access.ts`. Depth is bounded there rather than here: a
+ * database constraint cannot express "not too deep" without a trigger, and the
+ * cases that matter (a cycle, a folder moved into its own child) are prevented
+ * at the point of the move, where there is something useful to say about them.
+ *
+ * Deleting a folder deletes the folders beneath it and un-files the scripts
+ * inside, rather than deleting them. A folder is an organising idea; a script
+ * is work. Losing the second because you tidied up the first would be
+ * indefensible.
+ */
+export const folders = createTable(
+  "folder",
+  (d) => ({
+    id: d
+      .uuid()
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    ownerId: d
+      .varchar({ length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    parentId: d
+      .uuid()
+      .references((): AnyPgColumn => folders.id, { onDelete: "cascade" }),
+    name: d.varchar({ length: 120 }).notNull().default("New folder"),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: d
+      .timestamp({ withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull()
+      .$onUpdate(() => new Date()),
+  }),
+  (t) => [
+    index("folder_owner_idx").on(t.ownerId),
+    index("folder_parent_idx").on(t.parentId),
+  ],
+);
+
+/* -------------------------------------------------------------------------- */
 /* Scripts                                                                    */
 /* -------------------------------------------------------------------------- */
 
@@ -105,6 +165,8 @@ export const scripts = createTable(
       .varchar({ length: 255 })
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    /** Null means the account's top level, which is a real place, not a gap. */
+    folderId: d.uuid().references(() => folders.id, { onDelete: "set null" }),
     title: d.varchar({ length: 200 }).notNull().default("Untitled script"),
     body: d.text().notNull().default(""),
     /** Cached so the dashboard can show a read-time without parsing bodies. */
@@ -122,6 +184,81 @@ export const scripts = createTable(
   (t) => [
     index("script_owner_idx").on(t.ownerId),
     index("script_owner_updated_idx").on(t.ownerId, t.updatedAt),
+    index("script_folder_idx").on(t.folderId),
+  ],
+);
+
+/* -------------------------------------------------------------------------- */
+/* Sharing                                                                    */
+/* -------------------------------------------------------------------------- */
+
+export const SHARE_ROLES = ["viewer", "editor"] as const;
+export type ShareRole = (typeof SHARE_ROLES)[number];
+
+/**
+ * One grant: this address may reach this script, or this folder, at this level.
+ *
+ * Grants are keyed by **email address, not user id**, because the person you
+ * want to share with very often does not have an account yet. Storing the
+ * address means the grant is waiting for them the first time they sign in,
+ * with no invitation to accept and no placeholder user to reconcile later.
+ *
+ * That is only safe because every address on this system is verified by the
+ * identity provider before it ever reaches the database — see
+ * `server/auth/config.ts`. Without that guarantee, sharing by address would be
+ * sharing with whoever claimed it first.
+ *
+ * Addresses are stored lower-cased. Comparing them case-insensitively is not
+ * strictly correct for the local part, but every provider Teleprompt accepts
+ * treats it as case-insensitive, and someone typing `Ada@` for `ada@` is a far
+ * more likely event than two distinct people.
+ *
+ * The resource is two nullable foreign keys rather than a type tag and a loose
+ * id, so the database can enforce that a grant points at something real and
+ * can clean the grant up when that thing is deleted. The check constraint
+ * enforces exactly one of them.
+ */
+export const shares = createTable(
+  "share",
+  (d) => ({
+    id: d
+      .uuid()
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    /** Who granted it. Only an owner can, and only they can take it back. */
+    ownerId: d
+      .varchar({ length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    scriptId: d.uuid().references(() => scripts.id, { onDelete: "cascade" }),
+    folderId: d.uuid().references(() => folders.id, { onDelete: "cascade" }),
+    email: d.varchar({ length: 255 }).notNull(),
+    role: d
+      .varchar({ length: 16 })
+      .$type<ShareRole>()
+      .notNull()
+      .default("viewer"),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: d
+      .timestamp({ withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull()
+      .$onUpdate(() => new Date()),
+  }),
+  (t) => [
+    // Postgres treats NULLs as distinct in a unique index, which is exactly
+    // right here: these two constraints do not interfere with each other.
+    unique("share_script_email_unique").on(t.scriptId, t.email),
+    unique("share_folder_email_unique").on(t.folderId, t.email),
+    index("share_email_idx").on(t.email),
+    index("share_owner_idx").on(t.ownerId),
+    check(
+      "share_one_resource",
+      sql`(${t.scriptId} IS NULL) <> (${t.folderId} IS NULL)`,
+    ),
   ],
 );
 
@@ -249,7 +386,33 @@ export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
   sessions: many(sessions),
   scripts: many(scripts),
+  folders: many(folders),
   rooms: many(rooms),
+  shares: many(shares),
+}));
+
+export const foldersRelations = relations(folders, ({ one, many }) => ({
+  owner: one(users, { fields: [folders.ownerId], references: [users.id] }),
+  parent: one(folders, {
+    relationName: "folderTree",
+    fields: [folders.parentId],
+    references: [folders.id],
+  }),
+  children: many(folders, { relationName: "folderTree" }),
+  scripts: many(scripts),
+  shares: many(shares),
+}));
+
+export const sharesRelations = relations(shares, ({ one }) => ({
+  owner: one(users, { fields: [shares.ownerId], references: [users.id] }),
+  script: one(scripts, {
+    fields: [shares.scriptId],
+    references: [scripts.id],
+  }),
+  folder: one(folders, {
+    fields: [shares.folderId],
+    references: [folders.id],
+  }),
 }));
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
@@ -262,7 +425,12 @@ export const sessionsRelations = relations(sessions, ({ one }) => ({
 
 export const scriptsRelations = relations(scripts, ({ one, many }) => ({
   owner: one(users, { fields: [scripts.ownerId], references: [users.id] }),
+  folder: one(folders, {
+    fields: [scripts.folderId],
+    references: [folders.id],
+  }),
   rooms: many(rooms),
+  shares: many(shares),
 }));
 
 export const roomsRelations = relations(rooms, ({ one, many }) => ({
@@ -276,6 +444,8 @@ export const roomDevicesRelations = relations(roomDevices, ({ one }) => ({
   user: one(users, { fields: [roomDevices.userId], references: [users.id] }),
 }));
 
+export type Folder = typeof folders.$inferSelect;
+export type Share = typeof shares.$inferSelect;
 export type Script = typeof scripts.$inferSelect;
 export type Room = typeof rooms.$inferSelect;
 export type RoomDevice = typeof roomDevices.$inferSelect;

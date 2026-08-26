@@ -5,20 +5,23 @@ import { requireSession } from "~/server/auth/guard";
 import { api, HydrateClient } from "~/trpc/server";
 
 export const metadata: Metadata = {
-  title: "Scripts",
+  title: "Folder",
   robots: { index: false },
 };
 
-export default async function AppPage() {
-  await requireSession("/app");
+export default async function FolderPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  await requireSession(`/app/folders/${id}`);
 
-  void api.library.browse.prefetch({ folderId: null });
-  void api.library.sharedWithMe.prefetch();
-  void api.room.listLive.prefetch();
+  void api.library.browse.prefetch({ folderId: id });
 
   return (
     <HydrateClient>
-      <LibraryBoard folderId={null} />
+      <LibraryBoard folderId={id} />
     </HydrateClient>
   );
 }
