@@ -31,7 +31,7 @@ export default function Page() {
     >
       <h2 id="why">Why install it</h2>
       <p>
-        Teleprompt is a progressive web app, so installing it is not a download:
+        Teleprompt is a progressive web app, so installing it is not a download;
         it is the same site, given its own icon, its own window and no browser
         chrome. That matters more than it sounds:
       </p>
