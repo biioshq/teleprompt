@@ -50,7 +50,10 @@ export async function SiteHeader() {
           </Link>
         </nav>
 
-        <div className="flex items-center gap-4 justify-self-end">
+        {/* Pinned to the third track by hand. Below `md` the nav is `display:
+            none` and so stops being a grid item at all, and auto-placement
+            would drop this into the middle track and strand it mid-bar. */}
+        <div className="col-start-3 flex items-center gap-4 justify-self-end">
           <a
             href={SITE.repo}
             target="_blank"
