@@ -8,6 +8,8 @@ import MDEditor, {
 import "@uiw/react-md-editor/markdown-editor.css";
 import "@uiw/react-markdown-preview/markdown.css";
 
+import { ScriptPreview } from "~/components/app/script-preview";
+
 /**
  * A cue is Teleprompt's one addition to Markdown: a line starting with `::` is
  * a note to the reader — "look at camera", "wait for the slide" — shown on the
@@ -72,6 +74,12 @@ export default function MarkdownEditorInner({
         preview="edit"
         visibleDragbar={false}
         commands={TOOLBAR}
+        components={{
+          // The editor's own preview renders plain Markdown, which has no idea
+          // what `::` means. Handing the pane to the prompter's renderer is
+          // what makes the preview a preview rather than a second opinion.
+          preview: (source) => <ScriptPreview value={source} />,
+        }}
         extraCommands={[
           commands.codeEdit,
           commands.codeLive,

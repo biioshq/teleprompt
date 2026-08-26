@@ -15,6 +15,7 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 
 import { MarkdownEditor } from "~/components/app/markdown-editor";
+import { ScriptPreview } from "~/components/app/script-preview";
 import { ShareDialog } from "~/components/app/share-dialog";
 import { Cue } from "~/components/brand/cue";
 import { Button, ButtonLink } from "~/components/ui/button";
@@ -196,14 +197,15 @@ export function ScriptEditor({ scriptId }: { scriptId: string }) {
           />
 
           {readOnly ? (
-            <div
-              className="overflow-y-auto rounded-sm border border-line bg-surface px-6 py-5"
-              style={{ height }}
-            >
-              <pre className="font-mono text-[0.875rem] leading-[1.9] whitespace-pre-wrap text-ink-soft">
-                {body || "This script is empty."}
-              </pre>
-            </div>
+            // Rendered, not raw. Somebody with view-only access is here to
+            // read the script, and showing them the Markdown source would
+            // hand them the one view that is harder to read than both the
+            // thing they wrote and the thing they will present from.
+            <ScriptPreview
+              value={body}
+              height={height}
+              className="rounded-sm border border-line"
+            />
           ) : (
             <div className="overflow-hidden rounded-sm border border-line">
               <MarkdownEditor

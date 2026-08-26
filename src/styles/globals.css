@@ -411,7 +411,6 @@
     line-height: 1.75 !important;
   }
   .tp-editor .w-md-editor-preview {
-    background: var(--color-paper);
     box-shadow: inset 1px 0 0 0 var(--color-line);
   }
   .tp-editor .wmde-markdown {
@@ -622,4 +621,21 @@
     animation: none;
     transform: translate3d(0, calc(-1 * var(--tp-demo-lines, 12) * 0.5em), 0);
   }
+}
+
+/* ==========================================================================
+   Markdown editor: overrides that have to sit outside every layer
+   ========================================================================== */
+
+/* `@uiw/react-md-editor`'s stylesheet is imported by the component itself and
+   so is unlayered, and an unlayered rule beats a layered one however specific
+   the layered one is. These two therefore cannot live in `@layer components`
+   with the rest of the editor styling above.
+
+   The preview pane is rendered by the prompter's own block components, which
+   paint their own reading surface. The library's padding and paper background
+   would frame that dark panel in cream and make it read as a mistake. */
+.tp-editor .w-md-editor-preview {
+  padding: 0;
+  background: transparent;
 }
