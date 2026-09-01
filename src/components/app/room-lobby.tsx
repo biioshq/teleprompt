@@ -312,9 +312,7 @@ export function RoomLobby({ roomId }: { roomId: string }) {
             Opened {relativeTime(new Date(data.createdAt))}.{" "}
             {live
               ? "Rooms close themselves after 5 quiet minutes; this page counts, so it stays open while you are here."
-              : data.closedReason === "closed"
-                ? "It was ended deliberately."
-                : "It closed after 5 quiet minutes."}
+              : null}
           </p>
         )}
 

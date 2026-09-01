@@ -65,6 +65,7 @@
   --shadow-hard: 3px 3px 0 var(--color-ink);
   --shadow-hard-sm: 2px 2px 0 var(--color-ink);
   --shadow-hard-lg: 5px 5px 0 var(--color-ink);
+  --shadow-hard-xl: 8px 8px 0 var(--color-ink);
   --shadow-hard-brand: 3px 3px 0 var(--color-brand);
   --shadow-hard-line: 3px 3px 0 var(--color-line-firm);
   --shadow-lift:
@@ -227,6 +228,21 @@
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--color-muted);
+}
+
+/* A field of black pixels, drifting up the page at reading speed.
+
+   The hero's other texture is a grid, which is a lattice and reads as one; a
+   scatter is what keeps this from being a second one. It moves the way the
+   thing it sits behind moves: up, slowly, one tile every eighteen seconds. The
+   tile is 120px and the animation travels exactly 120px, so the loop has no
+   seam to find.
+
+   Faint on purpose. This is the same order of presence as `grain`: something
+   you notice has been moving rather than something you watch. */
+@utility pixel-rain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cg fill='%231a1a1b'%3E%3Crect x='8' y='14' width='3' height='3'/%3E%3Crect x='34' y='6' width='2' height='2'/%3E%3Crect x='67' y='22' width='2' height='2'/%3E%3Crect x='99' y='11' width='3' height='3'/%3E%3Crect x='18' y='41' width='2' height='2'/%3E%3Crect x='52' y='37' width='3' height='3'/%3E%3Crect x='86' y='49' width='2' height='2'/%3E%3Crect x='110' y='33' width='2' height='2'/%3E%3Crect x='5' y='68' width='2' height='2'/%3E%3Crect x='41' y='74' width='3' height='3'/%3E%3Crect x='72' y='61' width='2' height='2'/%3E%3Crect x='96' y='83' width='3' height='3'/%3E%3Crect x='26' y='97' width='3' height='3'/%3E%3Crect x='60' y='105' width='2' height='2'/%3E%3Crect x='88' y='112' width='2' height='2'/%3E%3Crect x='113' y='95' width='2' height='2'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 120px 120px;
 }
 
 @utility rule-grid {
@@ -545,6 +561,22 @@
     );
   }
 
+  /* The depth of field around the reading line.
+
+     The bands themselves are inline, because each is measured from its own
+     panel's reading line. This is only the way out for a reader who has asked
+     for fewer effects: the sharp copy stops being masked and covers the panel
+     on its own, and the out-of-focus copies are not drawn at all. They keep
+     the dimming and the fade; only the lens goes. */
+  @media (prefers-reduced-transparency: reduce) {
+    [data-tp-band] {
+      mask-image: none !important;
+    }
+    [data-tp-band]:not([data-tp-band="0"]) {
+      display: none !important;
+    }
+  }
+
   /* One line of the demo script. The rows are a fixed number of `em` tall and
      the engine scrolls by a count of them, so a cue, set several sizes down,
      cannot shorten its own row and walk every line after it off the reading
@@ -561,6 +593,69 @@
   }
   .tp-demo-line[data-tp-active] {
     opacity: 1;
+  }
+
+  /* The pair, under a lens.
+
+     The display and the remote are two flat planes at different depths in one
+     scene, rather than two cards each given a tilt of its own. They share the
+     camera, so the near one slides against the far one by exactly what the
+     depth between them is worth: the parallax is the geometry, not a number
+     picked because it looked about right.
+
+     Nothing turns until a mouse is on the pair, and it turns by a few degrees.
+     A permanent angle would put the hero's largest reading surface out of
+     square with the 56px rule grid directly behind it, and would keystone the
+     one thing the section is claiming, which is that a script stays legible on
+     both screens at once. */
+  .tp-demo-camera {
+    --tp-lens: 900px;
+    --tp-yaw: 0deg;
+    --tp-pitch: 0deg;
+  }
+
+  /* `perspective-origin` is left at the centre of this box, which is also the
+     `transform-origin` of both planes, which are both the full size of the
+     pair. Those three points coinciding is what makes the resting pose below
+     resolve to an exact identity rather than to something close to one. */
+  .tp-demo-camera[data-tp-cam] {
+    perspective: var(--tp-lens);
+  }
+
+  /* Depth, and the scale the lens will undo again: (900 - z) / 900. The two
+     are a pair. Moving a plane without recomputing its scale moves the resting
+     composition with it, which is the one thing this is not allowed to do.
+
+     The display is pushed back further than the remote is brought forward, so
+     that the plane carrying 7px cue text and 8px labels is the less scaled of
+     the two. */
+  .tp-demo-far {
+    --tp-z: -70px;
+    --tp-fix: 1.0778;
+  }
+  .tp-demo-near {
+    --tp-z: 50px;
+    --tp-fix: 0.9444;
+  }
+
+  /* Only ever mounted while the camera is: to a compositor deciding how to
+     rasterise eight-pixel type, a transform that resolves to identity is not
+     the same thing as no transform at all. Square, the pair is painted exactly
+     as it was before any of this existed.
+
+     The transition belongs inside this gate with the rest of it. Left outside,
+     it would still be running when the camera is dismounted, and it would
+     animate a pre-scale of 1.0778 towards 1 with the lens that was cancelling
+     it already gone: the pair would jump 7.8% larger and shrink back over the
+     next 320ms, every time the pointer left. Gated, the dismount is a snap
+     from a pose that projects to identity to no transform at all, which is
+     the same picture. */
+  [data-tp-cam] .tp-demo-far,
+  [data-tp-cam] .tp-demo-near {
+    transform: rotateX(var(--tp-pitch)) rotateY(var(--tp-yaw))
+      translateZ(var(--tp-z)) scale(var(--tp-fix));
+    transition: transform 320ms var(--ease-out-quint);
+    will-change: transform;
   }
 
   /* Coarse pointers get a bigger thumb and a thicker track: 20px is fine
@@ -622,6 +717,13 @@
   }
 }
 
+@keyframes tp-rain {
+  to {
+    /* Exactly one tile. Any other distance leaves a seam at the loop. */
+    transform: translate3d(0, -120px, 0);
+  }
+}
+
 @keyframes tp-marquee {
   from {
     transform: translate3d(0, 0, 0);
@@ -639,6 +741,9 @@
 }
 .animate-marquee {
   animation: tp-marquee 38s linear infinite;
+}
+.animate-rain {
+  animation: tp-rain 18s linear infinite;
 }
 
 /* ==========================================================================

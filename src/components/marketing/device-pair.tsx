@@ -25,6 +25,12 @@ import { cn } from "~/lib/utils";
  * and spent in `em`, never in pixels. That is not a trick for the marketing
  * page: it is the property the product is built on, expressed here in one
  * component instead of across a network.
+ *
+ * The pair also stands in a scene rather than on a page. Bring a mouse near it
+ * and both panels turn together under one lens, the remote a little in front
+ * of the display, so the two slide against each other by however much the
+ * depth between them is worth. `globals.css` holds the camera; this file only
+ * says where the pointer is.
  */
 
 type Line = { text: string; cue?: boolean };
@@ -86,6 +92,76 @@ function paceAt(index: number) {
  */
 function linesPerSecond(wpm: number) {
   return (wpm / 60) * (LINE_COUNT / SPOKEN_WORDS);
+}
+
+/**
+ * The depth of field around the reading line.
+ *
+ * A prompter is read at one line, and the eye should be able to find that line
+ * without hunting for it. The panels already dim and fade what is away from
+ * it; these put it out of focus as well, which is the cue a lens gives and the
+ * one the flat version of this was missing.
+ *
+ * The column is drawn three times at three focal depths, and each copy is
+ * masked to the band of distance it is responsible for. Neighbouring bands
+ * share a ramp, so a row crossing between them is a cross-fade rather than a
+ * step, and the blur a row carries is how far it is from being read.
+ *
+ * The obvious way to do this is one `backdrop-filter` per depth over a single
+ * column, and it works right up until the pair is put under the camera: a
+ * transformed ancestor makes a backdrop root, and inside one the mask stops
+ * clipping the filter, so every line blurs at full strength the moment the
+ * hero is hovered. Blurring real content instead has no such rule.
+ *
+ * `inner`/`outer` are the ramps in `em`, measured from the reading line, so
+ * the 17px panel and the 11px panel are blurred by the same amount of reading
+ * rather than the same number of pixels. `null` means the band runs all the
+ * way in to the reading line, or all the way out to the edge.
+ */
+const FOCUS_BANDS: {
+  blur: number;
+  inner: [number, number] | null;
+  outer: [number, number] | null;
+}[] = [
+  { blur: 0, inner: null, outer: [1.1, 2.5] },
+  { blur: 0.055, inner: [1.1, 2.5], outer: [3.3, 4.7] },
+  { blur: 0.15, inner: [3.3, 4.7], outer: null },
+];
+
+/**
+ * One band's mask: opaque across the slice of the panel that band owns, and
+ * ramped to nothing across the slice it shares with its neighbour.
+ */
+function bandMask(
+  band: (typeof FOCUS_BANDS)[number],
+  readingLine: number,
+  fontSize: number,
+) {
+  const at = (offset: number) =>
+    `${(readingLine + offset * fontSize).toFixed(1)}px`;
+  const stops: string[] = [];
+
+  if (band.outer)
+    stops.push(
+      `transparent ${at(-band.outer[1])}`,
+      `#000 ${at(-band.outer[0])}`,
+    );
+  else stops.push("#000 0%");
+
+  if (band.inner) {
+    stops.push(
+      `#000 ${at(-band.inner[1])}`,
+      `transparent ${at(-band.inner[0])}`,
+      `transparent ${at(band.inner[0])}`,
+      `#000 ${at(band.inner[1])}`,
+    );
+  }
+
+  if (band.outer)
+    stops.push(`#000 ${at(band.outer[0])}`, `transparent ${at(band.outer[1])}`);
+  else stops.push("#000 100%");
+
+  return `linear-gradient(to bottom, ${stops.join(", ")})`;
 }
 
 /** How far a finger may travel before a tap becomes a scrub. */
@@ -401,6 +477,8 @@ const ScrollingScript = memo(function ScrollingScript({
   drive?: Drive;
 }) {
   const pitch = fontSize * LINE_HEIGHT;
+  /** Where the row being read sits, measured from the top of the panel. */
+  const readingLine = readingLineOffset + pitch / 2;
   const gesture = useRef<{
     origin: number;
     last: number;
@@ -469,61 +547,78 @@ const ScrollingScript = memo(function ScrollingScript({
       onPointerLeave={() => drive?.onHover(null)}
     >
       <div className="tp-demo-fade absolute inset-0">
-        <div
-          ref={register}
-          className="absolute inset-x-0 top-0 will-change-transform"
-          style={{
-            fontSize,
-            paddingTop: readingLineOffset,
-            /* Matches the engine's opening position, so the server's markup
-               and the first painted frame are the same picture. */
-            transform: `translate3d(0, ${-OPENING_LINE * LINE_HEIGHT}em, 0)`,
-          }}
-        >
-          {/* Rendered twice, so the loop has no seam. */}
-          {[0, 1].map((copy) =>
-            SCRIPT.map((line, index) => (
-              <div
-                key={`${copy}-${index}`}
-                data-tp-line={index}
-                data-tp-copy={copy}
-                className="tp-demo-line flex items-center px-4 leading-tight"
-                style={{ height: `${LINE_HEIGHT}em` }}
-              >
-                {line.cue ? (
-                  /* A cue the way the script was written: the `::` that marks
-                     one in Markdown, kept as its own glyph rather than folded
-                     into the sentence. */
-                  <span className="flex min-w-0 items-baseline gap-[0.4em] text-brand">
-                    <span
-                      aria-hidden
-                      className="shrink-0 font-mono text-[0.66em]"
-                    >
-                      ::
-                    </span>
-                    <span className="min-w-0 truncate font-mono text-[0.66em] tracking-[0.08em] uppercase">
-                      {line.text}
-                    </span>
-                  </span>
-                ) : (
-                  <span className="min-w-0 truncate font-medium tracking-[-0.01em] text-stage-ink">
-                    {line.text}
-                  </span>
-                )}
-              </div>
-            )),
-          )}
-        </div>
+        {/* One column per focal depth. Every copy registers, so the engine
+            drives all of them with the one transform it already writes and
+            they cannot drift apart. The blur sits on the same element the
+            engine transforms, which keeps the filtered result static and
+            leaves the scroll a compositor move rather than a re-filter. */}
+        {FOCUS_BANDS.map((band, depth) => (
+          <div
+            key={band.blur}
+            className={cn(
+              "absolute inset-0",
+              depth > 0 && "pointer-events-none",
+            )}
+            data-tp-band={depth}
+            style={{ maskImage: bandMask(band, readingLine, fontSize) }}
+          >
+            <div
+              ref={register}
+              className="absolute inset-x-0 top-0 will-change-transform"
+              style={{
+                fontSize,
+                paddingTop: readingLineOffset,
+                filter: band.blur
+                  ? `blur(${(band.blur * fontSize).toFixed(2)}px)`
+                  : undefined,
+                /* Matches the engine's opening position, so the server's
+                   markup and the first painted frame are the same picture. */
+                transform: `translate3d(0, ${-OPENING_LINE * LINE_HEIGHT}em, 0)`,
+              }}
+            >
+              {/* Rendered twice, so the loop has no seam. */}
+              {[0, 1].map((copy) =>
+                SCRIPT.map((line, index) => (
+                  <div
+                    key={`${copy}-${index}`}
+                    data-tp-line={index}
+                    data-tp-copy={copy}
+                    className="tp-demo-line flex items-center px-4 leading-tight"
+                    style={{ height: `${LINE_HEIGHT}em` }}
+                  >
+                    {line.cue ? (
+                      /* Labelled, not punctuated. `::` is how a cue is written
+                         in Markdown; the word is what the prompter puts on
+                         screen when it reads one. Same two spans, same sizes
+                         and tracking as the real block in `script-blocks.tsx`,
+                         so the demo goes on being the product rather than a
+                         drawing of it. */
+                      <span className="flex min-w-0 items-baseline gap-[0.5em] text-brand">
+                        <span className="shrink-0 font-mono text-[0.5em] tracking-[0.2em] uppercase">
+                          cue
+                        </span>
+                        <span className="min-w-0 truncate font-mono text-[0.58em] tracking-[0.02em] uppercase">
+                          {line.text}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="min-w-0 truncate font-medium tracking-[-0.01em] text-stage-ink">
+                        {line.text}
+                      </span>
+                    )}
+                  </div>
+                )),
+              )}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* The reading line itself, centred on the row that sits under it. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 flex items-center gap-2 px-3"
-        style={{
-          top: readingLineOffset + pitch / 2,
-          transform: "translateY(-50%)",
-        }}
+        style={{ top: readingLine, transform: "translateY(-50%)" }}
       >
         <span className="h-0 w-0 border-y-[5px] border-l-[7px] border-y-transparent border-l-brand" />
         <span className="h-px flex-1 bg-brand opacity-30" />
@@ -566,6 +661,196 @@ function RemoteButton({
 }
 
 /* -------------------------------------------------------------------------- */
+/* The camera                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * How far the scene turns when the pointer is at the edge of the pair.
+ *
+ * Small on purpose. What this buys is about ten pixels of difference between
+ * the near and far edges of the display, which is enough to see a panel as a
+ * panel, and roughly six pixels of slide between the two screens. Past that it
+ * stops reading as depth and starts reading as an effect.
+ */
+const MAX_YAW = 3.6;
+const MAX_PITCH = 2.2;
+
+/** Longer than the CSS transition, so the pose has landed before it is let go. */
+const CAMERA_SETTLE_MS = 420;
+
+function clampUnit(value: number) {
+  return Math.max(-1, Math.min(1, value));
+}
+
+/**
+ * The pointer, turned into two angles on the pair's root.
+ *
+ * Everything else about the scene lives in `globals.css`: the lens, the depth
+ * of each plane, and the scale that depth has to be corrected by. They are
+ * only meaningful as a set, so they are kept as one.
+ *
+ * The angles are written to the root and never to a panel. The engine above
+ * owns `transform` on both scrolling columns and overwrites it sixty times a
+ * second, and the root itself is under `animate-rise`, whose last keyframe is
+ * `transform: none` and whose fill is `both` — an animation holding a property
+ * beats an inline style on the same element, silently and forever.
+ */
+function useCamera(root: React.RefObject<HTMLDivElement | null>) {
+  useEffect(() => {
+    const element = root.current;
+    if (!element) return;
+
+    /* A touch screen has no hover: `pointermove` arrives only with a finger
+       down, which on this component is the middle of a scrub. And someone who
+       has asked for less motion has not asked for a camera. */
+    if (
+      !window.matchMedia("(hover: hover) and (pointer: fine)").matches ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      return;
+    }
+
+    let bounds: DOMRect | null = null;
+    let pointer: { x: number; y: number } | null = null;
+    let frame: number | null = null;
+    let settle: number | null = null;
+    let live = false;
+    let held = false;
+    let stale = true;
+
+    /* Scrolling moves the pair under a pointer that has not moved, so the pose
+       it was struck for is no longer the right one. Flagging rather than
+       measuring here keeps the layout read out of the scroll handler: the
+       engine beside this writes a percentage width to the progress fill every
+       frame, which dirties layout, so a rect read from an event handler forces
+       a full synchronous re-layout of the page to answer it. */
+    const invalidate = () => {
+      stale = true;
+      if (live && frame === null) frame = requestAnimationFrame(pose);
+    };
+
+    const pose = () => {
+      frame = null;
+      if (!live || !pointer) return;
+      if (stale) {
+        bounds = element.getBoundingClientRect();
+        stale = false;
+      }
+      if (!bounds || bounds.width <= 0 || bounds.height <= 0) return;
+
+      const nx = clampUnit(((pointer.x - bounds.left) / bounds.width) * 2 - 1);
+      const ny = clampUnit(((pointer.y - bounds.top) / bounds.height) * 2 - 1);
+
+      /* The side the pointer is on comes forward, the way you tip something on
+         a desk towards you to look at it. */
+      element.style.setProperty("--tp-yaw", `${(-MAX_YAW * nx).toFixed(2)}deg`);
+      element.style.setProperty(
+        "--tp-pitch",
+        `${(MAX_PITCH * ny).toFixed(2)}deg`,
+      );
+    };
+
+    const mount = () => {
+      if (live) return;
+      live = true;
+      if (settle !== null) {
+        window.clearTimeout(settle);
+        settle = null;
+      }
+      stale = true;
+      window.addEventListener("scroll", invalidate, { passive: true });
+      window.addEventListener("resize", invalidate);
+      element.setAttribute("data-tp-cam", "");
+    };
+
+    const unmount = () => {
+      if (!live) return;
+      live = false;
+      pointer = null;
+      if (frame !== null) {
+        cancelAnimationFrame(frame);
+        frame = null;
+      }
+      window.removeEventListener("scroll", invalidate);
+      window.removeEventListener("resize", invalidate);
+      element.style.setProperty("--tp-yaw", "0deg");
+      element.style.setProperty("--tp-pitch", "0deg");
+
+      /* Square is not the same as absent. The planes stay in the camera's
+         coordinate system until the pose has finished easing back, and are
+         handed over to the ordinary painter only then, because that is the one
+         that renders eight-pixel type without resampling it. */
+      settle = window.setTimeout(() => {
+        settle = null;
+        element.removeAttribute("data-tp-cam");
+      }, CAMERA_SETTLE_MS);
+    };
+
+    const onMove = (event: PointerEvent) => {
+      if (held || event.pointerType === "touch") return;
+      mount();
+      pointer = { x: event.clientX, y: event.clientY };
+      if (frame === null) frame = requestAnimationFrame(pose);
+    };
+
+    const onLeave = (event: PointerEvent) => {
+      if (held || event.pointerType === "touch") return;
+      unmount();
+    };
+
+    /* The pose is frozen for the length of a gesture. Capturing a pointer does
+       not stop its moves reaching this element, so without this the pair would
+       turn under the very finger dragging the scrub bar, and the bar would
+       slide out from under it. */
+    const onDown = (event: PointerEvent) => {
+      /* Only a primary press is a gesture. A right-click opens a menu that
+         swallows its own release, and a latch nothing clears would leave the
+         pair frozen at whatever angle it was caught at. */
+      if (!event.isPrimary || event.button !== 0) return;
+      held = true;
+    };
+
+    /* On the window, and not on the pair. Most of what can be pressed here
+       does not capture the pointer — the display panel is not driven, and a
+       transport button is just a button — so a press that starts on the pair
+       and is let go anywhere else never comes back to the element at all. A
+       latch left standing would freeze the pose, hold both planes on the
+       composited path, and make every later approach do nothing. */
+    const onUp = (event: PointerEvent) => {
+      if (!held) return;
+      held = false;
+      /* A cancelled pointer reports where it was last seen, or nothing at all,
+         so it is treated as gone rather than trusted. */
+      if (event.type === "pointercancel") {
+        unmount();
+        return;
+      }
+      const under = document.elementFromPoint(event.clientX, event.clientY);
+      if (!under || !element.contains(under)) unmount();
+    };
+
+    element.addEventListener("pointermove", onMove);
+    element.addEventListener("pointerleave", onLeave);
+    element.addEventListener("pointerdown", onDown);
+    window.addEventListener("pointerup", onUp, true);
+    window.addEventListener("pointercancel", onUp, true);
+
+    return () => {
+      element.removeEventListener("pointermove", onMove);
+      element.removeEventListener("pointerleave", onLeave);
+      element.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("pointerup", onUp, true);
+      window.removeEventListener("pointercancel", onUp, true);
+      window.removeEventListener("scroll", invalidate);
+      window.removeEventListener("resize", invalidate);
+      if (frame !== null) cancelAnimationFrame(frame);
+      if (settle !== null) window.clearTimeout(settle);
+      element.removeAttribute("data-tp-cam");
+    };
+  }, [root]);
+}
+
+/* -------------------------------------------------------------------------- */
 /* The pair                                                                   */
 /* -------------------------------------------------------------------------- */
 
@@ -586,6 +871,8 @@ export function DevicePair({ className }: { className?: string }) {
     seekFraction,
     hover,
   } = usePrompterDemo();
+
+  useCamera(root);
 
   const drive = useMemo<Drive>(
     () => ({ onTap: jumpTo, onScrub: scrub, onHover: hover }),
@@ -620,7 +907,7 @@ export function DevicePair({ className }: { className?: string }) {
       ref={root}
       role="group"
       aria-label="Demo: a display, and the remote that drives it"
-      className={cn("relative", className)}
+      className={cn("tp-demo-camera relative", className)}
     >
       <p className="sr-only">
         Both panels are showing the same script at different type sizes. The
@@ -628,153 +915,170 @@ export function DevicePair({ className }: { className?: string }) {
       </p>
 
       {/* Display ---------------------------------------------------------- */}
-      <div className="rounded-lg border border-ink bg-ink p-2 shadow-hard-lg">
-        <div
-          aria-hidden
-          className="relative h-[19rem] overflow-hidden rounded-md bg-stage"
-        >
-          <ScrollingScript
-            fontSize={17}
-            readingLineOffset={118}
-            register={registerPanel}
-          />
+      {/* The card and the line that labels it are one plane: a caption
+          left behind by the card it belongs to would read as a bug in a
+          layout built on flush alignment. */}
+      <div className="tp-demo-far">
+        <div className="rounded-lg border border-ink bg-ink p-2 shadow-hard-lg">
+          <div
+            aria-hidden
+            className="relative h-[19rem] overflow-hidden rounded-md bg-stage"
+          >
+            <ScrollingScript
+              fontSize={17}
+              readingLineOffset={118}
+              register={registerPanel}
+            />
 
-          <div className="absolute inset-x-0 top-0 flex items-center gap-2 px-3 py-2.5">
-            <span className="font-mono text-[0.5625rem] tracking-[0.16em] text-stage-muted uppercase">
-              Display
-            </span>
-            <span className="ml-auto inline-flex items-center gap-1">
-              <Lightning size={10} weight="bold" className="text-brand" />
-              <span className="font-mono text-[0.5625rem] tracking-[0.12em] text-stage-muted uppercase">
-                Direct · 4ms
+            <div className="absolute inset-x-0 top-0 flex items-center gap-2 px-3 py-2.5">
+              <span className="font-mono text-[0.5625rem] tracking-[0.16em] text-stage-muted uppercase">
+                Display
               </span>
-            </span>
+              <span className="ml-auto inline-flex items-center gap-1">
+                <Lightning size={10} weight="bold" className="text-brand" />
+                <span className="font-mono text-[0.5625rem] tracking-[0.12em] text-stage-muted uppercase">
+                  Direct · 4ms
+                </span>
+              </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="mt-2 flex items-center justify-between px-1">
-        <span className="font-mono text-[0.625rem] tracking-[0.14em] text-faint uppercase">
-          The screen they see
-        </span>
-        <span className="font-mono text-[0.625rem] tracking-[0.14em] text-faint uppercase">
-          K7M-2QF
-        </span>
+        <div className="mt-2 flex items-center justify-between px-1">
+          <span className="font-mono text-[0.625rem] tracking-[0.14em] text-faint uppercase">
+            The screen they see
+          </span>
+          <span className="font-mono text-[0.625rem] tracking-[0.14em] text-faint uppercase">
+            K7M-2QF
+          </span>
+        </div>
       </div>
 
       {/* Remote ----------------------------------------------------------- */}
-      <div className="absolute -right-4 -bottom-16 w-[10.5rem] sm:-right-10 sm:w-[11.5rem]">
-        <div className="rounded-xl border border-ink bg-ink p-1.5 shadow-hard-lg">
-          <div className="relative h-[15rem] overflow-hidden rounded-lg bg-stage">
-            <ScrollingScript
-              fontSize={11}
-              readingLineOffset={76}
-              register={registerPanel}
-              drive={drive}
-            />
+      {/* The near plane is the full size of the pair, so that it turns
+          about the same point the far one does. The remote keeps its own
+          offsets inside it, against a box that is exactly the one it used
+          to hang off.
 
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 top-0 flex items-center gap-1.5 px-2.5 py-2"
-            >
-              <span
-                className={cn(
-                  "inline-block h-1 w-1 shrink-0 rounded-full bg-brand",
-                  isPlaying && "animate-live",
-                )}
+          The overhang is smaller than the gutter below `sm`, so that the
+          deeper shadow this card carries lands on paper rather than being
+          cut in half by the edge of a phone. */}
+      <div className="tp-demo-near pointer-events-none absolute inset-0">
+        <div className="pointer-events-auto absolute -right-2 -bottom-16 w-[10.5rem] sm:-right-10 sm:w-[11.5rem]">
+          <div className="rounded-xl border border-ink bg-ink p-1.5 shadow-hard-xl">
+            <div className="relative h-[15rem] overflow-hidden rounded-lg bg-stage">
+              <ScrollingScript
+                fontSize={11}
+                readingLineOffset={76}
+                register={registerPanel}
+                drive={drive}
               />
-              <span className="font-mono text-[0.5rem] tracking-[0.16em] text-stage-muted uppercase">
-                Remote
-              </span>
-              <span className="ml-auto font-mono text-[0.5rem] tracking-[0.08em] text-stage-muted uppercase tabular">
-                {Math.round(BASE_WPM * pace.multiplier)} wpm
-              </span>
-            </div>
 
-            {/* Controls */}
-            <div className="absolute inset-x-0 bottom-0 border-t border-stage-line bg-stage px-3 py-3">
               <div
-                ref={slider}
-                role="slider"
-                tabIndex={0}
-                aria-label="Position in the script"
-                aria-orientation="horizontal"
-                aria-valuemin={1}
-                aria-valuemax={LINE_COUNT}
-                aria-valuenow={OPENING_LINE + 1}
-                className="-my-1.5 cursor-pointer py-1.5 focus-visible:outline-brand"
-                style={{ touchAction: "none" }}
-                onPointerDown={(event) => {
-                  event.currentTarget.setPointerCapture(event.pointerId);
-                  scrubbing.current = true;
-                  seekFromPointer(event);
-                }}
-                onPointerMove={(event) => {
-                  if (scrubbing.current) seekFromPointer(event);
-                }}
-                onPointerUp={() => {
-                  scrubbing.current = false;
-                }}
-                onPointerCancel={() => {
-                  scrubbing.current = false;
-                }}
-                onKeyDown={onBarKeyDown}
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 top-0 flex items-center gap-1.5 px-2.5 py-2"
               >
-                <div className="h-[2px] w-full overflow-hidden rounded-full bg-stage-line">
-                  <div
-                    ref={fill}
-                    className="h-full bg-brand"
-                    style={{ width: `${(OPENING_LINE / LINE_COUNT) * 100}%` }}
-                  />
-                </div>
+                <span
+                  className={cn(
+                    "inline-block h-1 w-1 shrink-0 rounded-full bg-brand",
+                    isPlaying && "animate-live",
+                  )}
+                />
+                <span className="font-mono text-[0.5rem] tracking-[0.16em] text-stage-muted uppercase">
+                  Remote
+                </span>
+                <span className="ml-auto font-mono text-[0.5rem] tracking-[0.08em] text-stage-muted uppercase tabular">
+                  {Math.round(BASE_WPM * pace.multiplier)} wpm
+                </span>
               </div>
 
-              <div className="mt-2.5 flex items-center justify-center gap-2.5">
-                <RemoteButton label="Back to the top" onClick={restart}>
-                  <ArrowCounterClockwise size={9} weight="bold" />
-                </RemoteButton>
-                <RemoteButton
-                  label="Previous line"
-                  tone="ink"
-                  onClick={() => step(-1)}
+              {/* Controls */}
+              <div className="absolute inset-x-0 bottom-0 border-t border-stage-line bg-stage px-3 py-3">
+                <div
+                  ref={slider}
+                  role="slider"
+                  tabIndex={0}
+                  aria-label="Position in the script"
+                  aria-orientation="horizontal"
+                  aria-valuemin={1}
+                  aria-valuemax={LINE_COUNT}
+                  aria-valuenow={OPENING_LINE + 1}
+                  className="-my-1.5 cursor-pointer py-1.5 focus-visible:outline-brand"
+                  style={{ touchAction: "none" }}
+                  onPointerDown={(event) => {
+                    event.currentTarget.setPointerCapture(event.pointerId);
+                    scrubbing.current = true;
+                    seekFromPointer(event);
+                  }}
+                  onPointerMove={(event) => {
+                    if (scrubbing.current) seekFromPointer(event);
+                  }}
+                  onPointerUp={() => {
+                    scrubbing.current = false;
+                  }}
+                  onPointerCancel={() => {
+                    scrubbing.current = false;
+                  }}
+                  onKeyDown={onBarKeyDown}
                 >
-                  <CaretUp size={10} weight="bold" />
-                </RemoteButton>
+                  <div className="h-[2px] w-full overflow-hidden rounded-full bg-stage-line">
+                    <div
+                      ref={fill}
+                      className="h-full bg-brand"
+                      style={{ width: `${(OPENING_LINE / LINE_COUNT) * 100}%` }}
+                    />
+                  </div>
+                </div>
 
-                <button
-                  type="button"
-                  onClick={toggle}
-                  title={isPlaying ? "Pause" : "Play"}
-                  aria-label={isPlaying ? "Pause" : "Play"}
-                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-ink transition-transform focus-visible:outline-brand active:scale-95"
-                >
-                  {isPlaying ? (
-                    <Pause size={13} weight="fill" />
-                  ) : (
-                    <Play size={13} weight="fill" />
-                  )}
-                </button>
+                <div className="mt-2.5 flex items-center justify-center gap-2.5">
+                  <RemoteButton label="Back to the top" onClick={restart}>
+                    <ArrowCounterClockwise size={9} weight="bold" />
+                  </RemoteButton>
+                  <RemoteButton
+                    label="Previous line"
+                    tone="ink"
+                    onClick={() => step(-1)}
+                  >
+                    <CaretUp size={10} weight="bold" />
+                  </RemoteButton>
 
-                <RemoteButton
-                  label="Next line"
-                  tone="ink"
-                  onClick={() => step(1)}
-                >
-                  <CaretDown size={10} weight="bold" />
-                </RemoteButton>
-                <RemoteButton
-                  label={`Reading pace: ${pace.label}, ${Math.round(BASE_WPM * pace.multiplier)} words a minute`}
-                  onClick={cyclePace}
-                >
-                  <span className="font-mono text-[0.5rem]">{pace.label}</span>
-                </RemoteButton>
+                  <button
+                    type="button"
+                    onClick={toggle}
+                    title={isPlaying ? "Pause" : "Play"}
+                    aria-label={isPlaying ? "Pause" : "Play"}
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-ink transition-transform focus-visible:outline-brand active:scale-95"
+                  >
+                    {isPlaying ? (
+                      <Pause size={13} weight="fill" />
+                    ) : (
+                      <Play size={13} weight="fill" />
+                    )}
+                  </button>
+
+                  <RemoteButton
+                    label="Next line"
+                    tone="ink"
+                    onClick={() => step(1)}
+                  >
+                    <CaretDown size={10} weight="bold" />
+                  </RemoteButton>
+                  <RemoteButton
+                    label={`Reading pace: ${pace.label}, ${Math.round(BASE_WPM * pace.multiplier)} words a minute`}
+                    onClick={cyclePace}
+                  >
+                    <span className="font-mono text-[0.5rem]">
+                      {pace.label}
+                    </span>
+                  </RemoteButton>
+                </div>
               </div>
             </div>
           </div>
+          <p className="mt-3 text-center font-mono text-[0.625rem] tracking-[0.14em] text-faint uppercase">
+            The one you hold
+          </p>
         </div>
-        <p className="mt-2 text-center font-mono text-[0.625rem] tracking-[0.14em] text-faint uppercase">
-          The one you hold
-        </p>
       </div>
     </div>
   );

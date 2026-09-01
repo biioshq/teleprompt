@@ -13,6 +13,7 @@ const PRODUCT = [
   { href: "/app", label: "Scripts" },
   { href: "/join", label: "Join a room" },
   { href: "/#how", label: "How it works" },
+  { href: "/#voice", label: "Voice tracking" },
   { href: "/#sync", label: "The sync protocol" },
 ];
 
@@ -139,7 +140,7 @@ export function SiteFooter() {
             Built with {"<3"} by {BIIOS.name} for the Community.
           </p>
           <p className="font-mono text-[0.6875rem] tracking-[0.1em] text-faint">
-            {SITE.license} licensed · open source
+            {SITE.license} licensed
           </p>
           <nav className="ml-auto flex items-center gap-5">
             {LEGAL.map((item) => (

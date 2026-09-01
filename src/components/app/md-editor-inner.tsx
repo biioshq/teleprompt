@@ -86,8 +86,7 @@ export default function MarkdownEditorInner({
           commands.codePreview,
         ]}
         textareaProps={{
-          placeholder:
-            "Write the words you are going to say.\n\nA heading starts a section. A bullet is one beat. A line that starts with :: is a cue only you see.",
+          placeholder: "Write the words you are going to say.",
           spellCheck: true,
         }}
       />

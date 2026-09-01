@@ -97,8 +97,7 @@ export default function DocsIndexPage() {
         </h2>
         <p className="mt-3 max-w-2xl text-[0.9375rem] leading-relaxed text-muted">
           These pages are about hosting Teleprompt and changing it rather than
-          using it: environment variables, deployments that fail, the wire
-          protocol and how the repository is laid out.
+          using it.
         </p>
 
         <div className="mt-10 space-y-12">

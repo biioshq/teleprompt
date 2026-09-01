@@ -43,6 +43,24 @@ export function Hero({ signedIn }: { signedIn: boolean }) {
         }}
       />
 
+      {/* The grid holds the top of the section and this holds the bottom, so
+          the two textures take turns rather than sitting on top of each other.
+          It fades out again before the section ends: at full strength it meets
+          the rule under the hero as a cut rather than as an ending.
+
+          The layer is taller than the section at both ends, which is the room
+          the drift needs to travel a whole tile without ever showing an edge. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+        style={{
+          maskImage:
+            "linear-gradient(to bottom, transparent 0%, #000 58%, #000 84%, transparent 100%)",
+        }}
+      >
+        <div className="animate-rain absolute inset-x-0 -top-[120px] h-[calc(100%+240px)] pixel-rain opacity-[0.09]" />
+      </div>
+
       <div className="relative mx-auto grid max-w-6xl items-center gap-16 pt-16 gutter pb-40 lg:grid-cols-[1.05fr_0.95fr] lg:pt-24 lg:pb-28">
         <div className="animate-rise">
           <Cue>free forever, open source, installs like an app</Cue>
@@ -106,7 +124,8 @@ export function HowItWorks() {
       <div className="mx-auto max-w-6xl gutter">
         <div className="max-w-2xl">
           <h2 className="text-[clamp(1.9rem,4vw,2.75rem)]">
-            Three steps, and the second one is typing six characters.
+            Three steps, then the script follows your voice instead of your
+            thumb.
           </h2>
         </div>
 
@@ -644,7 +663,10 @@ export function OpenSourceSection() {
           </div>
 
           <div>
-            <ul className="flex flex-wrap gap-2">
+            <p className="font-mono text-[0.6875rem] tracking-[0.14em] text-faint uppercase">
+              built with
+            </p>
+            <ul className="mt-3 flex flex-wrap gap-2">
               {STACK.map((item) => (
                 <li
                   key={item}
@@ -710,8 +732,7 @@ export function BiiosSection() {
             </p>
             <p className="mt-5 max-w-md text-[0.9375rem] leading-relaxed text-white/50">
               {BIIOS.mission} Biios is a startup consulting studio in{" "}
-              {BIIOS.city}, working end to end across strategy, branding,
-              digital products and growth.
+              {BIIOS.city}.
             </p>
 
             <dl className="mt-10 grid max-w-md grid-cols-2 gap-x-8 gap-y-6 sm:grid-cols-4 lg:grid-cols-2">
@@ -751,9 +772,6 @@ export function BiiosSection() {
                 launch films, and there was no reason to keep it to ourselves.
                 It is given to the community as it is used internally: same
                 code, no held-back paid tier.
-              </p>
-              <p className="mt-4 font-mono text-[0.6875rem] tracking-[0.14em] text-white/40">
-                Built with {"<3"} by {BIIOS.name} for the Community.
               </p>
               <a
                 href={BIIOS.contact}

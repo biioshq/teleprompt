@@ -223,7 +223,7 @@ export function ScriptEditor({ scriptId }: { scriptId: string }) {
             {readOnly ? (
               <>
                 <Eye size={13} weight="bold" className="text-muted" />
-                Read-only. Duplicate it to make a version you can change.
+                Duplicate it to make a version you can change.
               </>
             ) : update.isPending ? (
               <>

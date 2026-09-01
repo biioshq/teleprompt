@@ -66,8 +66,8 @@ export default function Page() {
       </ul>
       <p>
         The upgrade is retried in the background for about a minute, then left
-        alone. That is deliberate: the relay carries a session perfectly well,
-        and a pair that cannot reach each other will not start being able to.
+        alone. That is deliberate: a pair that cannot reach each other will not
+        start being able to.
       </p>
       <p>
         <strong>Same Wi-Fi and still on the relay?</strong> Two causes account

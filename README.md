@@ -13,15 +13,17 @@ A peer-to-peer teleprompter. One device shows the words, another drives them.
 [Architecture](#how-the-sync-works) ·
 [Licence](#licence)
 
+we &lt;3 open source
+
 </div>
 
 ---
 
 ## What it is
 
-Teleprompt is a teleprompter you drive from a second device. Write a script in
-Markdown, open a session on the screen your audience sees, and sign in on your
-phone with the same account, and that phone becomes the remote.
+Write a script in Markdown, open a session on the screen your audience sees,
+and sign in on your phone with the same account: that phone becomes the
+remote.
 
 Both devices show **the same words on the same line**, and each lays them out
 for its own screen. The phone is not a shrunken copy of the display; it is the

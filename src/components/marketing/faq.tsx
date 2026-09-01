@@ -2,20 +2,12 @@ import Link from "next/link";
 
 const QUESTIONS = [
   {
-    q: "Is it really peer-to-peer?",
-    a: "Where the network allows it, yes. The two devices meet on a realtime channel, exchange WebRTC offers over it, and then move the position updates onto a direct data channel between them. The connection badge tells you which path is live: Direct or Relay. Signalling always goes through the relay, because that is what bootstraps the direct path.",
-  },
-  {
-    q: "Do both devices have to be on the same network?",
-    a: "No. Same Wi-Fi gives the lowest latency and the best chance of a direct route, but a phone on mobile data and a laptop on hotel Wi-Fi will still pair. They just fall back to the relay if no direct route can be found.",
-  },
-  {
     q: "Can someone else join my room?",
     a: "Only if they are signed in to your account. Rooms are scoped to an account, and the secret that names the realtime channel is only ever returned to a signed-in device on the owning account. The six-character code is a convenience for you, not a permission grant.",
   },
   {
     q: "Why does the remote show smaller text than the display?",
-    a: "Because it is a phone. Both devices show the same words on the same line, but each lays them out for its own screen. That works because devices sync a text anchor rather than a scroll offset.",
+    a: "Because it is a phone. Both devices show the same words on the same line, but each lays them out for its own screen.",
   },
   {
     q: "Does it work with beam-splitter glass?",
@@ -23,7 +15,7 @@ const QUESTIONS = [
   },
   {
     q: "What happens if I edit the script while a room is open?",
-    a: "The room picks it up on its own, within a few seconds. A room holds a snapshot rather than a live reference, because both devices have to render byte-identical text for positions to mean the same thing on each - but keeping that snapshot current is the app's job, not yours. Your reading position is carried across the change rather than reset.",
+    a: "The room picks it up on its own, within a few seconds. A room holds a snapshot rather than a live reference, because both devices have to render byte-identical text for positions to mean the same thing on each, but keeping that snapshot current is the app's job, not yours. Your reading position is carried across the change rather than reset.",
   },
   {
     q: "Does voice tracking send my audio anywhere?",
@@ -40,6 +32,14 @@ const QUESTIONS = [
   {
     q: "What do you store?",
     a: "Your name, email address and profile image from whichever provider you signed in with, the scripts you write, and the rooms you open. No analytics on what you say, no recordings, no third-party trackers.",
+  },
+  {
+    q: "Is it really peer-to-peer?",
+    a: "Where the network allows it, yes. The two devices meet on a realtime channel, exchange WebRTC offers over it, and then move the position updates onto a direct data channel between them. The connection badge tells you which path is live: Direct or Relay. Signalling always goes through the relay, because that is what bootstraps the direct path.",
+  },
+  {
+    q: "Do both devices have to be on the same network?",
+    a: "No. Same Wi-Fi gives the lowest latency and the best chance of a direct route, but a phone on mobile data and a laptop on hotel Wi-Fi will still pair. They just fall back to the relay if no direct route can be found.",
   },
 ];
 

@@ -31,10 +31,10 @@ export async function SiteHeader() {
             How it works
           </Link>
           <Link
-            href="/#sync"
+            href="/#voice"
             className="text-sm text-muted transition-colors hover:text-ink"
           >
-            The sync
+            Voice tracking
           </Link>
           <Link
             href="/docs"

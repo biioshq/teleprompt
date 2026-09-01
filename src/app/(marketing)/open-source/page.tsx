@@ -40,14 +40,14 @@ const DEPENDENCIES = [
 export default function OpenSourcePage() {
   return (
     <main className="mx-auto max-w-3xl py-16 gutter lg:py-24">
-      <p className="eyebrow">Open source</p>
+      <p className="eyebrow">we {"<3"} open source</p>
       <h1 className="mt-4 text-[clamp(2rem,4.5vw,3rem)]">
         {SITE.license} licensed, and the repository is the real one.
       </h1>
       <p className="mt-5 text-[1.0625rem] leading-relaxed text-muted">
-        There is no separate internal version of {SITE.name}. What runs here is
-        what is in the repository, and the hosted instance exists so that people
-        who do not want to run infrastructure do not have to.
+        There is no separate internal version of {SITE.name}. The hosted
+        instance exists so that people who do not want to run infrastructure do
+        not have to.
       </p>
 
       <div className="mt-8 flex flex-wrap gap-3">
@@ -103,10 +103,6 @@ THE SOFTWARE.`}</code>
           tool nobody could improve. So it is given to the community as it is
           used internally: same code, no held-back tier.
         </p>
-        <p className="font-mono text-[0.8125rem]">
-          Built with {"<3"} by {BIIOS.name} for the Community.
-        </p>
-
         <h2 id="thanks">Standing on</h2>
         <p>
           {SITE.name} is a thin layer over a lot of other people&rsquo;s work.
@@ -174,16 +170,8 @@ THE SOFTWARE.`}</code>
           />
         </a>
         <p className="mt-3 text-[0.9375rem] leading-relaxed text-white/60">
-          {BIIOS.tagline} {BIIOS.mission}
+          {BIIOS.mission}
         </p>
-        <a
-          href={BIIOS.contact}
-          target="_blank"
-          rel="noreferrer noopener"
-          className="mt-4 inline-block text-sm text-white underline decoration-[var(--color-brand)] decoration-2 underline-offset-4"
-        >
-          Work with Biios
-        </a>
       </div>
     </main>
   );

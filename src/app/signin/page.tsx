@@ -114,7 +114,7 @@ export default async function SignInPage({
         </div>
 
         <p className="relative z-10 font-mono text-[0.6875rem] tracking-[0.14em] text-white/35 uppercase">
-          Built with care by {BIIOS.name}, {BIIOS.city}
+          Built with {"<3"} by {BIIOS.name}, {BIIOS.city}
         </p>
 
         <div

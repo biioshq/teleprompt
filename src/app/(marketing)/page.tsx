@@ -30,7 +30,6 @@ export default async function HomePage() {
     <>
       <Hero signedIn={signedIn} />
       <HowItWorks />
-      <SyncExplainer />
       <VoiceSection />
       <Features />
       <WritingSection />
@@ -38,6 +37,11 @@ export default async function HomePage() {
       <OpenSourceSection />
       <BiiosSection />
       <Faq />
+      {/* The protocol last. It is the most interesting section to us and the
+          least useful to somebody deciding whether to use this, so it reads as
+          a footnote for the curious rather than as something they have to get
+          past to reach the parts about presenting. */}
+      <SyncExplainer />
       <FinalCta signedIn={signedIn} />
     </>
   );

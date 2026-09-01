@@ -172,7 +172,7 @@ export default async function OpengraphImage() {
         }}
       >
         <span>BUILT WITH {"<3"} BY BIIOS FOR THE COMMUNITY</span>
-        <span style={{ color: "#ff8800" }}>MIT · OPEN SOURCE</span>
+        <span style={{ color: "#ff8800" }}>MIT LICENSED</span>
       </div>
     </div>,
     { ...size, fonts: fonts.length > 0 ? fonts : undefined },

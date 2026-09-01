@@ -168,7 +168,8 @@ scripts/
       </ol>
       <p>
         Teleprompt is {SITE.license} licensed and maintained by {BIIOS.name}.
-        Contributions are accepted under the same licence.
+        Contributions are accepted under the same licence: a merged patch
+        carries your name in the history and nothing else changes hands.
       </p>
     </DocPage>
   );

@@ -285,11 +285,10 @@ npm run preview    # build, then serve it`}</code>
       <ul>
         <li>Set every variable above in the host&rsquo;s environment.</li>
         <li>
-          <strong>On Vercel</strong>, the public origin is filled in for you:{" "}
-          <code>NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL</code> is a system
-          environment variable, provided you leave{" "}
+          <strong>On Vercel</strong>,{" "}
+          <code>NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL</code> is filled in
+          for you, provided you leave{" "}
           <em>Enable access to System Environment Variables</em> switched on.
-          There is nothing to set.
         </li>
         <li>
           <strong>Anywhere else</strong>, set that same variable by hand to your

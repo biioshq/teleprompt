@@ -50,7 +50,7 @@ const CLOSED_DETAIL: Record<ClosedReason, string> = {
   closed: "Someone ended this room. Open a new one from the script.",
   expired:
     "This room went five quiet minutes with nothing on it. Open a new one from the script.",
-  unknown: "This room has ended. Open a new one from the script.",
+  unknown: "Open a new one from the script.",
 };
 
 /** The one terminal screen for a room that is over, however it got there. */
